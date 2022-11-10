@@ -1,0 +1,272 @@
+\documentclass[11pt]{article}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}[margins=1in]
+\graphicspath{ {./images/} }
+
+
+\title{\textbf{Weather Translation in Images Using Variational Autoencoders}}
+\author{Stefan Stefanache}
+
+\begin{document}
+    \maketitle
+
+    \section{Paper Outline}
+    \begin{enumerate}
+        \item Abstract
+        \item Introduction
+            \begin{enumerate}
+                \item Motivation and Overview
+                \item Contributions
+            \end{enumerate}
+        \item Background
+            \begin{enumerate}
+                \item Related Works
+            \end{enumerate}
+        \item Our Approach
+            \begin{enumerate}
+                \item Dataset Creation
+                \item Model Architecture
+                \item Training
+            \end{enumerate}
+        \item Experiments
+            \begin{enumerate}
+                \item Results
+                \item Comparison with Other Models
+                \item Failure Cases
+            \end{enumerate}
+        \item Conclusion
+        \item References
+    \end{enumerate}
+
+    \section{Hypothesis}
+
+    In this paper, the weather translation task is proposed, which refers to transferring weather conditions of 
+    the image from one category to another. It is important for photographic style transfer. This has been 
+    attempted before through WeatherGAN \cite{DBLP:journals/corr/abs-2103-05422}, where weather conditions
+    are determined by various weather-cues, obtained through attention and segmentation modules, which
+    are then passed to a translation module that generates a new image. Our hypothesis is that variational 
+    autoencoders can be trained to give better (more realistic) results in this task, by capturing weather 
+    information in their latent space.
+
+    \section{Methodology}
+
+    To achieve this result, we follow the steps below:
+
+    \begin{enumerate}
+        \item Create dataset containing pictures from the same angle and different weather conditions, 
+            labelled with weather categories. 
+            \begin{enumerate}
+                \item Scrape images from \href{windy.com}{windy.com} webcams from 
+                    year-round slide show. These contain images with all kinds of 
+                    weather (foggy, snowy, sunny, cloudy), taken from the same POV (see Fig. \ref{fig:windy}).
+                \item Drop images of streams having defects like a lot of noise or high variations in 
+                    scenery (rarely, webcams can be moved to another location).
+                \item Develop a ResNet-based \cite{DBLP:journals/corr/HeZRS15} network similar to WeatherNet 
+                    \cite{DBLP:journals/corr/abs-1910-09910} to label each image with the 
+                    corresponding weather category.
+            \end{enumerate}
+            Assuming that stream images are from the same physical locations,
+            it's likely that the only differences beteween images is given by the changes in scenery 
+            caused by time of the year and weather conditions. This allows autoencoders to "learn"
+            what this difference is and reproduce it.
+        \item Create and train autoencoders for each possible translation (e.g. sunny $\to$ cloudy). 
+            For the training, we follow the next steps for each ordered pair of images
+            from the same stream in the dataset:
+            \begin{enumerate}
+                \item Based on the labels of the images, choose the coresponding autoencoder.
+                    For example, if the images have the sunny and cloudy labels,
+                    use the autoencoder that transforms sunny images to cloudy ones.
+                \item Train the chosen encoder to transform from one image to the other e.g.
+                    give one image as input of the decoder, and the other as the target output
+                    of the decoder.
+            \end{enumerate}
+            This way, we should end up with a set of encoders that can be merged into model
+            that can reliably perform weather translations.
+    \end{enumerate}
+
+    \section{Experiments}
+    To check how performant our model is, we'll separate some of our dataset into a test portion, 
+    and we'll be be evaluating the model's accuracy on it using 2 metrics traditionally 
+    \cite{https://doi.org/10.48550/arxiv.2206.10935} used for 
+    quantifying the quality of image generative models:
+    \begin{enumerate}
+        \item Frechet Inception Distance (FID) \cite{https://doi.org/10.48550/arxiv.1706.08500}: 
+            The score summarizes how similar the two groups are in 
+            terms of statistics on computer vision features of the raw images calculated using 
+            the Inception v3 model used for image classification. Lower scores indicate the two groups 
+            of images are more similar, or have more similar statistics, with a perfect score 
+            being 0.0 indicating that the two groups of images are identical.
+        \item Kernel Inception Distance (KID): Calculates the square of the maximum average difference 
+            between the two sets of images (input  and output), which represents the distribution 
+            distance between the two sets of data. In addition, KID has an unbiased estimator, 
+            which makes KID close to human perception.
+    \end{enumerate}
+
+    Moreso, this metrics can be used to compare the performance of our model with others 
+    like Pix2Pix \cite{DBLP:journals/corr/IsolaZZE16}, NVIDIA's UNIT \cite{DBLP:journals/corr/LiuBK17}  
+    or WeatherGAN \cite{DBLP:journals/corr/abs-2103-05422}.
+
+    \begin{figure}[!htb]
+        \minipage{0.499\textwidth}
+            \includegraphics[width=\linewidth]{images/1_cloudy.jpg}
+        \endminipage\hfill
+        \minipage{0.499\textwidth}
+            \includegraphics[width=\linewidth]{images/2_sunny.jpg}
+        \endminipage\hfill
+        \minipage{0.499\textwidth}
+            \includegraphics[width=\linewidth]{images/3_snowy_foggy.jpg}
+        \endminipage\hfill
+        \minipage{0.499\textwidth}
+            \includegraphics[width=\linewidth]{images/4_snowy_sunny.jpg}
+        \endminipage\hfill
+        \caption{Images from the Splugen Tanatzhöhe Ski Area webcam from \href{windy.com}{windy.com}}
+        \label{fig:windy}
+    \end{figure}
+    \section{Reference Motivation}
+    \begin{enumerate}
+        \item \textbf{ML Concepts \& Neural Networks.}
+            Learn more about ML theory and algorithms, along with how Neural Networks are used.
+            Bishop's PRML \cite{bishop:2006:PRML} gives an overview of general ML topics and intoduces 
+            Neural Networks in Chapter 5. Goodfellow's \cite{Goodfellow-et-al-2016} book gives an introductive 
+            overview of Deep Learning. Specific Neural Networks architectures like ResNet 
+            \cite{DBLP:journals/corr/HeZRS15} or GANs \cite{https://doi.org/10.48550/arxiv.1406.2661}
+            are useful for understanding previous weather recognition and image translation approaches.
+        \item \textbf{Weather Recogniton using ResNet.}
+            Study previous approaches 
+            \cite{DBLP:journals/corr/abs-1910-09910, DBLP:journals/corr/abs-1904-10709, 
+            DBLP:journals/corr/abs-2103-05422} of recognizing weather conditions in images using different
+            ResNet architectures. Either try to use/implement one of the papers or come up with a slight variation.
+
+        \item \textbf{Variational Encoders.}
+            Learn about Variational Encoders and the theory behind them: original paper 
+            \cite{DBLP:journals/corr/abs-1906-02691}, introductive overview 
+            \cite{https://doi.org/10.48550/arxiv.1312.6114}.
+        \item \textbf{Image Translation.}
+            Study how image translation is done, from generic frameworks like Pix2Pix 
+            \cite{DBLP:journals/corr/IsolaZZE16} or NVIDIA's UNIT \cite{DBLP:journals/corr/LiuBK17},
+            to the weather specific case - WeatherGAN \cite{DBLP:journals/corr/abs-2103-05422}.
+    \end{enumerate}
+
+    \section{Selected References}
+    \subsection{Deep Residual Learning for Image Recognition \cite{DBLP:journals/corr/HeZRS15}}
+    \begin{itemize}
+        \item \textbf{Summary:} Offers an overview of residual learning and the ResNet architecture. Useful
+            for recognizing weather conditions in images and constructing the dataset. 
+        \item \textbf{138531 Citations} and \textbf{49 References} (IEEE style)
+        \item \textbf{Chapters:}
+            \begin{enumerate}
+                \item Introduction
+                \item Related Work
+                \item Deep Residual Learning
+                \item Experiments
+                \item References
+            \end{enumerate}
+    \end{itemize}
+
+    \subsection{WeatherNet: Recognising weather and visual conditions from street-level \cite{DBLP:journals/corr/abs-1910-09910}}
+    \begin{itemize}
+        \item \textbf{Summary:} A pipeline of four deep Convolutional Neural Network (CNN) models, so-called 
+            the WeatherNet, is trained, relying on residual learning using ResNet50 architecture, to extract 
+            various weather and visual conditions such as Dawn/dusk, day and night for time detection, and 
+            glare for lighting conditions, and clear, rainy, snowy, and foggy for weather conditions.
+        \item \textbf{33 Citations} and \textbf{39 References} (IEEE style)
+        \item \textbf{Chapters:}
+            \begin{enumerate}
+                \item Introduction
+                \item Related Work
+                \item WeatherNet Frameworks 
+                \item Results 
+                \item Discussion 
+                \item Remarks and Future Work
+                \item Acknowledgement
+                \item References
+            \end{enumerate}
+    \end{itemize}
+
+    \subsection{An Introduction to Variational Autoencoders \cite{DBLP:journals/corr/abs-1906-02691}}
+    \begin{itemize}
+        \item \textbf{Summary:} Variational autoencoders provide a principled framework
+            for learning deep latent-variable models and corresponding
+            inference models. In the paper, an introduction
+            to variational autoencoders and some important extensions is provided
+        \item \textbf{1077 Citations} and \textbf{213 References} (IEEE style)
+        \item \textbf{Chapters:}
+            \begin{enumerate}
+                \item Introduction
+                \item Variational Autoencoders 
+                \item Beyond Gaussian Posteriors 
+                \item Deeper Generative Models 
+                \item Conclusion 
+                \item Acknowledgement
+                \item References
+            \end{enumerate}
+    \end{itemize}
+
+    \subsection{Unsupervised Image-to-Image Translation Networks \cite{DBLP:journals/corr/LiuBK17}}
+    \begin{itemize}
+        \item \textbf{Summary:} Unsupervised image-to-image translation aims at learning a joint distribution of
+            images in different domains by using images from the marginal distributions in
+            individual domains. Since there exists an infinite set of joint distributions that
+            can arrive the given marginal distributions, one could infer nothing about the joint
+            distribution from the marginal distributions without additional assumptions. To
+            address the problem, a shared-latent space assumption is made and an
+            unsupervised image-to-image translation framework based on Coupled GANs is proposed.
+        \item \textbf{2359 Citations} and \textbf{29 References} (IEEE style)
+        \item \textbf{Chapters:}
+            \begin{enumerate}
+                \item Introduction
+                \item Assumptions 
+                \item Framework
+                \item Experiments
+                \item Related Work 
+                \item Conclusion and Future Work 
+                \item Network Architecture
+                \item Domain Adaptation
+            \end{enumerate}
+    \end{itemize}
+
+    \subsection{Weather GAN: Multi-Domain Weather Translation Using Generative Adversarial Networks \cite{DBLP:journals/corr/abs-2103-05422}}
+    \begin{itemize}
+        \item \textbf{Summary:} A new task is proposed, namely, weather translation, which refers to 
+            transferring weather conditions of the image from one category to another. It is important
+            for photographic style transfer. Although lots of approaches have been proposed in traditional 
+            image translation tasks, few of them can handle the multi-category weather translation task, since 
+            weather conditions have rich categories and highly complex semantic structures. To address 
+            this problem, a multi-domain weather translation approach based on generative 
+            adversarial networks (GAN) is developed, denoted as Weather GAN, which can achieve the transferring of 
+            weather conditions among sunny, cloudy, foggy, rainy and snowy. Specifically, the weather 
+            conditions in the image are determined by various weather-cues, such as cloud, blue sky, 
+            wet ground, etc.
+        \item \textbf{9 Citations} and \textbf{50 References} (IEEE style)
+        \item \textbf{Chapters:}
+            \begin{enumerate}
+                \item Introduction
+                \item Related Work
+                \item Our Approachj
+                \item Experiments
+                \item Conclusion 
+                \item References 
+            \end{enumerate}
+    \end{itemize}
+
+    \section{Paper Classification}
+    \begin{enumerate}
+        \item \textbf{ACM}
+            \begin{enumerate}
+                \item I.2.10:  Vision and Scene Understanding
+                \item I.4.8:  Scene Analysis
+            \end{enumerate}
+        \item \textbf{AMS}
+            \begin{enumerate}
+                \item 68T07.  Artificial neural networks and deep learning 
+                \item 68T45.  Machine vision and scene understanding
+            \end{enumerate}
+    \end{enumerate}
+
+    \bibliography{references}
+    \bibliographystyle{plainurl}
+
+\end{document}
