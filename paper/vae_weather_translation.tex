@@ -3,6 +3,7 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{graphicx}
+\usepackage{amssymb}
 \usepackage{geometry}[margins=1in]
 \graphicspath{ {./images/} }
 
@@ -13,43 +14,158 @@
 \begin{document}
     \maketitle
 
-    \section{Paper Outline}
-    \begin{enumerate}
-        \item Abstract
-        \item Introduction
-            \begin{enumerate}
-                \item Motivation and Overview
-                \item Contributions
-            \end{enumerate}
-        \item Background
-            \begin{enumerate}
-                \item Related Works
-            \end{enumerate}
-        \item Our Approach
-            \begin{enumerate}
-                \item Dataset Creation
-                \item Model Architecture
-                \item Training
-            \end{enumerate}
-        \item Experiments
-            \begin{enumerate}
-                \item Results
-                \item Comparison with Other Models
-                \item Failure Cases
-            \end{enumerate}
-        \item Conclusion
-        \item References
-    \end{enumerate}
-
     \section{Hypothesis}
+    In this paper, the weather translation task is proposed, which 
+    refers to transferring weather conditions of the image from one category 
+    to another. It is important for photographic style transfer. This has been 
+    attempted before through WeatherGAN \cite{DBLP:journals/corr/abs-2103-05422}, where weather 
+    conditions are determined by various weather-cues, obtained through 
+    attention and segmentation modules, which are then passed to a translation module 
+    that generates a new image. Our hypothesis is that convolutional variational autoencoders 
+    can be trained to give better (more realistic) results in this task, by 
+    using a specialized dataset containing paired (from the same POV) images with different
+    weather conditions. \textbf{Disclaimer:} Currently, the paper describes the dataset and
+    its construction, specifically for the sunny/cloudy cases, along with a draft proposal
+    for the VAE model architecture. The code is available at 
+    \href{https://github.com/thesstefan/vae_weather_translation}
+    {github.com/thesstefan/vae\_weather\_translation}.
+    and the dataset is available 
+    \href{https://drive.google.com/file/d/1q7OjUZgz2ZzPzfsHPzbNluJye450oid9/view?usp=share_link}
+    {here}.
+    \section{Related Work}
 
-    In this paper, the weather translation task is proposed, which refers to transferring weather conditions of 
-    the image from one category to another. It is important for photographic style transfer. This has been 
-    attempted before through WeatherGAN \cite{DBLP:journals/corr/abs-2103-05422}, where weather conditions
-    are determined by various weather-cues, obtained through attention and segmentation modules, which
-    are then passed to a translation module that generates a new image. Our hypothesis is that variational 
-    autoencoders can be trained to give better (more realistic) results in this task, by capturing weather 
-    information in their latent space.
+    In this section, we introduce some state-of-the art approaches of weather recognition
+    and image-to-image translation, as well as a brief discussion on datasets created 
+    for various tasks related to weather.
+
+    \subsection{Weather Recognition}
+    Elhoseiny et al. \cite{7351424} tackles the two-class weather classification 
+    task by the AlexNet \cite{10.1145/3065386}, which has got superior performance 
+    than handcrafted features. Moreover, to combine the advantages of deep feature 
+    and handcrafted feature, these two kinds of features are integrated 
+    in \cite{7784804}. The multi-task model proposed by 
+    Zhao et al. \cite{ZHAO2019272} identifies weather cues in images through segmentation
+    and then uses them to classify images, achieving state-of-the-art performance.
+
+    \subsection{Weather Datasets}
+
+    One popular dataset for weather recognition is called \textbf{MWI} \cite{7351637, ZHANG2016365}
+    (Multiclass Weather Image). It contains 20K images obtained from many web albums and 
+    films, such as Flicker, Picasa, Poco, Fengniao. The images are collected 
+    by several helpers, and they choose images with their own common sense. The main 
+    purpose of this dataset is to provide an extensive testbed for the evaluation of 
+    existing appearance models, and provide insight needed to develop new appearance models.
+
+    To facilitate weather property estimation from images, a large-scale image dataset 
+    associated with rich weather information called \textbf{Image2Weather} \cite{7545010} 
+    was developed. Based on the taken time and geographical information of an image, 
+    weather properties obtained from a weather forecast website are linked with the images. 
+    Through data filtering like indoor/outdoor classification and sky region detection, 
+    the dataset consisting of more than 180,000 photos is built to promote related research.
+    
+    \subsection{Image-To-Image Translation}
+
+    Studies have explored various models with GANs for image-to-image translation.
+    For example, Pix2pix, used a conditional, generative adversarial network 
+    \cite{DBLP:journals/corr/MirzaO14} for image translation, when a source and target image 
+    pair was given. Similar methods have been adopted for several tasks, such as synthesizing 
+    a photograph from a sketch \cite{DBLP:journals/corr/SangkloyLFYH16}. Weather translation
+    was also approached using GANs, through WeatherNet \cite{DBLP:journals/corr/abs-1910-09910}.
+
+    When paired training data were not available for some tasks, other studies have 
+    suggested several approaches to transform from an unpaired image. This has been approached
+    from both the perspective of coupled GANs (UNIT \cite{DBLP:journals/corr/LiuBK17}),
+    and by using cross-domain variational encoders and decoders \cite{DBLP:10.3390/app9224780}.
+
+    \section{Our Approach}
+
+    In this paper, we propose an image-to-image translation framework for the
+    weather translation task, using CVAEs (convolutional variational autoencoders)
+    powered by a specialized dataset (called \textbf{weather2weather}), created for
+    this purpose.
+
+    \subsection{The weather2weather Dataset}
+
+    The \textbf{weather2weather} dataset is constructed from scratch by ourselves. 
+    It consists of \textbf{TBD} (currently around 5000) images scraped 
+    from \href{windy.com}{windy.com}, a provider of webcam streams. Images are separated 
+    by the webcam streams they belong from, so one can create pairs of images from 
+    the same location, which can then be used for paired image-to-image translation 
+    tasks related to weather. Weather-cues for each image are extracted in a segmentation 
+    mask using the multi-task weather recognition model proposed in \cite{ZHAO2019272},  
+    which are then used to assign a weather label to the image. The process of 
+    constructing the dataset is illustrated in \ref{fig:dataset}. Stream images and 
+    their inferred properties are also cleaned and verified by the authors, who 
+    check for misclassifications or unsuitable images using tools like the 
+    one shown in \ref{fig:dataset_tool}. 
+
+    Currently, the model only classifies images into sunny or cloudy. The model could also be
+    extended for multiclass classification for other cases like foggy, snowy or rainy weather.
+    The process of enhancing the \textbf{weather2weather} dataset could be automated further
+    by handling some edge cases, like detecting noisy images or webcams that are moving. 
+
+    \begin{figure}[!htb]
+        \includegraphics[width=\linewidth]{images/dataset_assembly.jpg}
+        \caption{Creating the \textbf{weather2weather} dataset}
+        \label{fig:dataset}
+    \end{figure}
+
+    \begin{figure}[!htb]
+        \includegraphics[width=\linewidth]{images/dataset_tool.png}
+        \caption{Validating streams in the \textbf{weather2weather} dataset}
+        \label{fig:dataset_tool}
+    \end{figure}
+
+    \subsection{Weather-To-Weather Translation Model}
+
+    \textbf{Disclaimer:} Exact model architecture and training details \textbf{TBD}.
+    
+    Convolutional variational auto-encoders are used to learn about the distribution
+    of images and weather cues (segmentation masks) for each weather category (currently
+    cloudy or sunny). The bottlenecks of both decoders are then merged through a composition
+    (\textbf{TBD}) operation. The model samples a data sample from the resulting distribution,
+    which then is taken through a decoder that produces the translated image. Note that
+    each decoder is also trained on a corresponding weather category. Generally, the 
+    decoders and encoders used are chosen based on the input image weather category and
+    the target weather category.
+
+    The train data is obtained by taking each pair of images with different weather categories
+    from every stream in the \textbf{weather2weather} dataset, resulting in over 15000 such pairs.
+    Train images and segmentations masks are pulled through the model. To train the auto-encoders
+    and decoders for each domain, we follow the basic equation of the convolutional
+    auto-encoder \cite{https://doi.org/10.48550/arxiv.1312.6114}. The representation
+    of the $k$-th latent feature map extraction for input $I$ is denoted as
+    \begin{equation}
+        h^k = \sigma(I * W^k + b^k)
+    \end{equation}
+    where $\sigma$ is an activation function, $W_k$ is a weight, $b^k$ is a bias,
+    and $*$ represents the 2D convolution operation. The reconstruction of the latent
+    representation is obtained using 
+    \begin{equation}
+        y = \sigma\bigg(\int_{k \in H} h^k * \widehat{W} + c\bigg)
+    \end{equation}
+    where $c$ is a bias for input channel. The model is trained to minimize the ELBO loss
+    \cite{https://doi.org/10.48550/arxiv.1312.6114}, which is defined as
+    \begin{equation}
+        \min \mathbb{E}_q[\log q(z | x) - \log p(z)] - \mathbb{E}_q \log p(x | z)
+    \end{equation}
+    where the first term is the Kullback-Leibler divergence and the second term is 
+    the construction loss.
+
+    The first step of translation is taking an image and inferring its weather cues
+    and weather label using the model proposed by \cite{ZHAO2019272}. Based on the
+    classification label, the corresponding encoders are used to compress the image
+    and its segmentation mask to produce the merged latent space. A sample then is taken
+    from the merged sample space to produce the translated image using the corresponding
+    encoder. The process is illustrated in \ref{fig:model}.
+
+    \begin{figure}[!htb]
+        \includegraphics[width=\linewidth]{images/model_architecture.jpg}
+        \caption{The weather translation process}
+        \label{fig:model}
+    \end{figure}
+
+
 
     \section{Methodology}
 
@@ -125,6 +241,7 @@
         \caption{Images from the Splugen Tanatzhöhe Ski Area webcam from \href{windy.com}{windy.com}}
         \label{fig:windy}
     \end{figure}
+
     \section{Reference Motivation}
     \begin{enumerate}
         \item \textbf{ML Concepts \& Neural Networks.}
@@ -265,6 +382,35 @@
                 \item 68T45.  Machine vision and scene understanding
             \end{enumerate}
     \end{enumerate}
+
+    \section{Paper Outline}
+    \begin{enumerate}
+        \item Abstract
+        \item Introduction
+            \begin{enumerate}
+                \item Motivation and Overview
+                \item Contributions
+            \end{enumerate}
+        \item Background
+            \begin{enumerate}
+                \item Related Works
+            \end{enumerate}
+        \item Our Approach
+            \begin{enumerate}
+                \item Dataset Creation
+                \item Model Architecture
+                \item Training
+            \end{enumerate}
+        \item Experiments
+            \begin{enumerate}
+                \item Results
+                \item Comparison with Other Models
+                \item Failure Cases
+            \end{enumerate}
+        \item Conclusion
+        \item References
+    \end{enumerate}
+
 
     \bibliography{references}
     \bibliographystyle{plain}
