@@ -15,6 +15,7 @@ import sys
 parser = argparse.ArgumentParser(description='Description of your program')
 
 parser.add_argument('--input_dir', type=str)
+parser.add_argument('--root_dir', type=str)
 parser.add_argument('--all_unverified', type=bool,
                     action=argparse.BooleanOptionalAction)
 
@@ -158,14 +159,15 @@ def validate_dir(dirname: str) -> None:
 
 if __name__ == '__main__':
     if args['all_unverified']:
-        root_dir = 'Data/WINDY_DATASET'
-
         marks_regex = '[' + '|'.join(MARKS) + ']'
         # TODO: Update
-        dirs = glob.iglob('*', root_dir=root_dir)
+        dirs = glob.iglob('*', root_dir=args['root_dir'])
 
         for dir in dirs:
             if dir.split('_')[-1] not in MARKS:
-                if len(os.listdir(os.path.join(root_dir, dir))) < 5:
+                if len(os.listdir(os.path.join(args['root_dir'], dir))) < 5:
                     continue
-                validate_dir(os.path.join(root_dir, dir))
+                validate_dir(os.path.join(args['root_dir'], dir))
+
+    else:
+        validate_dir(os.path.join(args['root_dir'], args['input_dir']))
