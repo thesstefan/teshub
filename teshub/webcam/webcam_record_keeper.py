@@ -13,13 +13,13 @@ from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 class WebcamRecordSchema(pa.SchemaModel):
     id: Index[int] = pa.Field(unique=True)
-    categories: Optional[Series[str]]
-    city: Optional[Series[str]]
-    region: Optional[Series[str]]
-    country: Optional[Series[str]]
-    continent: Optional[Series[str]]
-    latitude: Optional[Series[float]]
-    longitude: Optional[Series[float]]
+    categories: Optional[Series[str]] = pa.Field(nullable=True)
+    city: Optional[Series[str]] = pa.Field(nullable=True)
+    region: Optional[Series[str]] = pa.Field(nullable=True)
+    country: Optional[Series[str]] = pa.Field(nullable=True)
+    continent: Optional[Series[str]] = pa.Field(nullable=True)
+    latitude: Optional[Series[float]] = pa.Field(nullable=True)
+    longitude: Optional[Series[float]] = pa.Field(nullable=True)
     image_count: Series[int] = pa.Field(gt=0)
     status: Series[str] = pa.Field(
         isin=cast(List[str], [status.value for status in WebcamStatus])
