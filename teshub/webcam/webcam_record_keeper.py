@@ -77,7 +77,7 @@ class WebcamRecordKeeper:
             [
                 [
                     webcam.id,
-                    ",".join(webcam.categories),
+                    ",".join(webcam.categories) if webcam.categories else None,
                     webcam.location.city,
                     webcam.location.region,
                     webcam.location.country,
