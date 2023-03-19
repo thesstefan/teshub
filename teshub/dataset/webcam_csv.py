@@ -47,6 +47,9 @@ class WebcamCSV:
     ]
 
     def _from_record_df(self, record_df: pd.DataFrame) -> List[WebcamStream]:
+        if not len(record_df):
+            return []
+
         WebcamRecordSchema.validate(record_df)
 
         return [
