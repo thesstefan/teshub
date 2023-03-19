@@ -31,7 +31,7 @@ class WebcamAdnotationTaskCreator:
                     assignee_id,
                     webcam.image_paths,
                 )
-            except exceptions.ApiException as e:
+            except Exception as e:
                 logging.error(e)
 
                 continue
