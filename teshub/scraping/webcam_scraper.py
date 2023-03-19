@@ -9,11 +9,11 @@ from typing import (Callable, Dict, List, Mapping, Optional, Sequence, Type,
 import requests
 from bs4 import BeautifulSoup
 
+from teshub.dataset.webcam_csv import WebcamCSV
 from teshub.scraping.webcam_downloader import (AsyncWebcamDownloader,
                                                SequentialWebcamDownloader,
                                                WebcamDownloader)
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
-from teshub.webcam.webcam_record_keeper import WebcamRecordKeeper
 from teshub.webcam.webcam_stream import (WebcamLocation, WebcamStatus,
                                          WebcamStream)
 
@@ -30,7 +30,7 @@ JSON: TypeAlias = (
 @dataclass
 class WebcamScraper:
     config: WebcamScraperConfig
-    webcam_record_keeper: WebcamRecordKeeper
+    webcam_csv: WebcamCSV
     webcam_downloader: Type[WebcamDownloader] = field(
         init=False, default=AsyncWebcamDownloader
     )
@@ -99,7 +99,7 @@ class WebcamScraper:
 
         return webcam_list
 
-    def _get_webcam_image_urls(self, webcam_id: int) -> List[str]:
+    def _get_webcam_image_urls(self, webcam_id: str) -> List[str]:
         logging.info(f"Requesting webcam {webcam_id} metadata...")
         embed_webcam_link = (
             f"{EMBED_WINDY_WEBCAM_URL}/{webcam_id}"
@@ -138,9 +138,7 @@ class WebcamScraper:
                 filter(
                     cast(
                         Callable[[WebcamStream], bool],
-                        lambda webcam: not self.webcam_record_keeper.exists(
-                            webcam
-                        ),
+                        lambda webcam: not self.webcam_csv.exists(webcam),
                     ),
                     self._request_webcam_list(request_url),
                 )
@@ -178,12 +176,7 @@ class WebcamScraper:
                 continue
 
             webcam.status = WebcamStatus.DOWNLOADED
-            self.webcam_record_keeper.add_record(webcam, persist=True)
-
-            logging.info(
-                f"Persisted webcam record {webcam.id} in "
-                f"{self.webcam_record_keeper.csv_path} successfully."
-            )
+            self.webcam_csv.add_record(webcam, persist=True)
 
             logging.info(
                 f"Scraped {index + 1}/{self.config.webcam_count} streams\n"
