@@ -91,7 +91,9 @@ class WebcamCSV:
 
     def load(self) -> None:
         try:
-            self._webcam_df = pd.read_csv(self.csv_path).set_index("id")
+            self._webcam_df = pd.read_csv(
+                self.csv_path, dtype={"id": str}
+            ).set_index("id")
 
             if not self._webcam_df.empty:
                 WebcamRecordSchema.validate(self._webcam_df)
@@ -111,11 +113,6 @@ class WebcamCSV:
 
     def save(self) -> None:
         self._webcam_df.to_csv(self.csv_path, index=True)
-
-    def get_webcam(self, webcam_id: str) -> WebcamStream:
-        return self._from_record_df(
-            cast(Series[str], self._webcam_df.loc[[int(webcam_id)]])
-        )[0]
 
     def query_webcams(
         self, df_query: Optional[str], count: Optional[int]
@@ -144,12 +141,12 @@ class WebcamCSV:
     def update_record_status(
         self, webcam_id: str, status: WebcamStatus, persist: bool = True
     ) -> None:
-        webcam_record = self._webcam_df.loc[[int(webcam_id)]]
+        webcam_record = self._webcam_df.loc[[webcam_id]]
         old_status = cast(str, webcam_record[["status"]].values[0][0])
         webcam_record["status"] = status.value
 
         WebcamRecordSchema.validate(webcam_record)
-        self._webcam_df.loc[[int(webcam_id)]] = webcam_record
+        self._webcam_df.loc[[webcam_id]] = webcam_record
 
         if persist:
             self.save()
@@ -161,6 +158,6 @@ class WebcamCSV:
             )
 
     def exists(self, webcam: WebcamStream) -> bool:
-        return int(webcam.id) in cast(
-            npt.NDArray[np.int64], self._webcam_df.index.values
+        return webcam.id in cast(
+            npt.NDArray[np.str_], self._webcam_df.index.values
         )
