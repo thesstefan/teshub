@@ -78,7 +78,7 @@ class WebcamScraper:
 
             webcam_list.append(
                 WebcamStream(
-                    int(cast(str, webcam_json["id"])),
+                    cast(str, webcam_json["id"]),
                     [
                         category_json["id"]
                         for category_json in cast(
