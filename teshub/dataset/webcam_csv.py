@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import ClassVar, List, Optional, cast
 
@@ -110,6 +111,12 @@ class WebcamCSV:
             self._webcam_df = pd.DataFrame(
                 columns=self.record_items
             ).set_index("id")
+
+            csv_dir = os.path.dirname(os.path.abspath(self.csv_path))
+            if not os.path.isdir(csv_dir):
+                os.makedirs(csv_dir)
+
+            self.save()
 
     def save(self) -> None:
         self._webcam_df.to_csv(self.csv_path, index=True)

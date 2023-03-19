@@ -77,8 +77,12 @@ def scraper_config_from_args(args: argparse.Namespace) -> WebcamScraperConfig:
 
 
 def csv_path_from_args(args: argparse.Namespace) -> str:
-    return cast(str, args.csv_path) or os.path.join(
-        cast(str, args.webcam_dir), "webcam_metadata.csv"
+    return (
+        os.path.abspath(cast(str, args.csv_path))
+        if args.csv_path
+        else os.path.join(
+            os.path.abspath(cast(str, args.webcam_dir)), "webcam_metadata.csv"
+        )
     )
 
 
