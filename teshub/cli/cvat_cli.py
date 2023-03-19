@@ -34,21 +34,26 @@ subparsers = parser.add_subparsers(
 task_creator_parser = subparsers.add_parser("task_creator")
 
 task_creator_parser.add_argument(
+    "--dataset_dir",
+    type=str,
+    default=".",
+    help=(
+        "Directory where webcam streams are stored. "
+        "If specified, local CVAT storage will be used. "
+        "Otherwise, will attempt to use shared CVAT storage with "
+        "image paths from the current directory"
+    ),
+)
+task_creator_parser.add_argument(
     "--cvat_host",
     type=str,
     default="localhost:8080",
     help="CVAT host endpoint",
 )
 task_creator_parser.add_argument(
-    "--dataset_dir",
-    type=str,
-    required=True,
-    help="Directory where webcam streams are stored",
-)
-task_creator_parser.add_argument(
     "--csv_path",
     type=str,
-    default=None,
+    required=True,
     help=(
         "CSV file where webcam metadata is stored. "
         "If not specified, `dataset_dir/webcam_metadata.csv` is used"
@@ -93,8 +98,12 @@ task_creator_parser.add_argument(
 
 
 def csv_path_from_args(args: argparse.Namespace) -> str:
-    return cast(str, args.csv_path) or os.path.join(
-        cast(str, args.dataset_dir), "webcam_metadata.csv"
+    return (
+        os.path.abspath(cast(str, args.csv_path))
+        if args.csv_path
+        else os.path.join(
+            os.path.abspath(cast(str, args.webcam_dir)), "webcam_metadata.csv"
+        )
     )
 
 
@@ -104,7 +113,9 @@ def create_tasks(args: argparse.Namespace) -> None:
         username=cast(str, args.cvat_username),
         password=cast(str, args.cvat_password),
     )
-    cvat_task_creator = CVATTaskCreator(cvat_config, use_shared_storage=True)
+    cvat_task_creator = CVATTaskCreator(
+        cvat_config, use_shared_storage=(cast(str, args.dataset_dir) == ".")
+    )
 
     webcam_csv = WebcamCSV(csv_path_from_args(args))
     webcam_csv.load()
