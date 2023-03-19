@@ -1,0 +1,135 @@
+{
+    "name": "TESHUB_DATASET",
+    "bug_tracker": "",
+    "status": "annotation",
+    "labels": [
+        {
+            "name": "snowy",
+            "color": "#fdfdfd",
+            "attributes": [
+                {
+                    "name": "coverage",
+                    "mutable": true,
+                    "input_type": "number",
+                    "default_value": "0",
+                    "values": [
+                        "0",
+                        "1",
+                        "0.25"
+                    ]
+                }
+            ],
+            "type": "tag",
+            "sublabels": []
+        },
+        {
+            "name": "rainy",
+            "color": "#33ddff",
+            "attributes": [],
+            "type": "tag",
+            "sublabels": []
+        },
+        {
+            "name": "foggy",
+            "color": "#f5183e",
+            "attributes": [
+                {
+                    "name": "depth",
+                    "mutable": true,
+                    "input_type": "number",
+                    "default_value": "0",
+                    "values": [
+                        "0",
+                        "1",
+                        "0.5"
+                    ]
+                }
+            ],
+            "type": "tag",
+            "sublabels": []
+        },
+        {
+            "name": "cloudy",
+            "color": "#afaeb8",
+            "attributes": [
+                {
+                    "name": "coverage",
+                    "mutable": true,
+                    "input_type": "number",
+                    "default_value": "0",
+                    "values": [
+                        "0",
+                        "1",
+                        "0.25"
+                    ]
+                }
+            ],
+            "type": "tag",
+            "sublabels": []
+        },
+        {
+            "name": "black_clouds",
+            "color": "#161516",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "white_clouds",
+            "color": "#ff00cc",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "snow",
+            "color": "#ffffff",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "blue_sky",
+            "color": "#2e06f3",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "white_sky",
+            "color": "#66ff66",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "gray_sky",
+            "color": "#8c78f0",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "shadow",
+            "color": "#fafa37",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "sun",
+            "color": "#34d1b7",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        },
+        {
+            "name": "wet_ground",
+            "color": "#24b353",
+            "attributes": [],
+            "type": "rectangle",
+            "sublabels": []
+        }
+    ],
+    "version": "1.0"
+}
