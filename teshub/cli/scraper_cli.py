@@ -3,7 +3,7 @@ import logging
 import os
 from typing import cast
 
-from teshub.webcam.webcam_record_keeper import WebcamRecordKeeper
+from teshub.dataset.webcam_csv import WebcamCSV
 from teshub.scraping.webcam_scraper import WebcamScraper
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
 
@@ -72,7 +72,7 @@ def scraper_config_from_args(args: argparse.Namespace) -> WebcamScraperConfig:
         api_key=cast(str, args.api_key),
         dst_dir=cast(str, args.webcam_dir),
         async_download=cast(bool, args.async_download),
-        request_offset=cast(int, args.page_offset)
+        request_offset=cast(int, args.page_offset),
     )
 
 
@@ -86,10 +86,10 @@ def main() -> None:
     args = parser.parse_args()
     scraper_config = scraper_config_from_args(args)
 
-    record_keeper = WebcamRecordKeeper(csv_path_from_args(args))
-    record_keeper.load()
+    webcam_csv = WebcamCSV(csv_path_from_args(args))
+    webcam_csv.load()
 
-    WebcamScraper(scraper_config, record_keeper).scrape_webcams()
+    WebcamScraper(scraper_config, webcam_csv).scrape_webcams()
 
 
 if __name__ == "__main__":
