@@ -3,8 +3,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
-from typing import (Callable, Dict, List, Mapping, Optional, Sequence, Type,
-                    TypeAlias, Union, cast)
+from typing import Callable, Dict, List, Optional, Type, Union, cast
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,16 +13,13 @@ from teshub.scraping.webcam_downloader import (AsyncWebcamDownloader,
                                                SequentialWebcamDownloader,
                                                WebcamDownloader)
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
+from teshub.typing import JSON
 from teshub.webcam.webcam_stream import (WebcamLocation, WebcamStatus,
                                          WebcamStream)
 
 WINDY_API_URL = "https://api.windy.com/api/webcams/v2/list"
 EMBED_WINDY_WEBCAM_URL = (
     "https://webcams.windy.com/webcams/public/embed/player"
-)
-
-JSON: TypeAlias = (
-    Mapping[str, "JSON"] | Sequence["JSON"] | str | int | float | bool | None
 )
 
 
