@@ -9,8 +9,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import Index, Series
 
-from teshub.webcam.webcam_stream import (WebcamLocation, WebcamStatus,
-                                         WebcamStream)
+from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 
 class WebcamRecordSchema(pa.SchemaModel):
@@ -54,17 +53,16 @@ class WebcamCSV:
 
         return [
             WebcamStream(
-                str(id),
-                cast(str, record["categories"]).split(","),
-                WebcamLocation(
-                    cast(str, record["city"]),
-                    cast(str, record["region"]),
-                    cast(str, record["country"]),
-                    cast(str, record["continent"]),
-                    cast(float, record["latitude"]),
-                    cast(float, record["longitude"]),
-                ),
+                id,
                 WebcamStatus(cast(str, record["status"])),
+                cast(int, record["image_count"]),
+                cast(str, record["categories"]).split(","),
+                cast(str, record["city"]),
+                cast(str, record["region"]),
+                cast(str, record["country"]),
+                cast(str, record["continent"]),
+                cast(float, record["latitude"]),
+                cast(float, record["longitude"]),
             )
             for id, record in record_df.iterrows()
         ]
@@ -75,12 +73,12 @@ class WebcamCSV:
                 [
                     webcam.id,
                     ",".join(webcam.categories) if webcam.categories else None,
-                    webcam.location.city,
-                    webcam.location.region,
-                    webcam.location.country,
-                    webcam.location.continent,
-                    float(webcam.location.latitude),
-                    float(webcam.location.longitude),
+                    webcam.city,
+                    webcam.region,
+                    webcam.country,
+                    webcam.continent,
+                    float(webcam.latitude),
+                    float(webcam.longitude),
                     len(webcam.image_urls),
                     webcam.status.value,
                 ]

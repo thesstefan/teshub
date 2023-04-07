@@ -14,8 +14,7 @@ from teshub.scraping.webcam_downloader import (AsyncWebcamDownloader,
                                                WebcamDownloader)
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
 from teshub.typing import JSON
-from teshub.webcam.webcam_stream import (WebcamLocation, WebcamStatus,
-                                         WebcamStream)
+from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 WINDY_API_URL = "https://api.windy.com/api/webcams/v2/list"
 EMBED_WINDY_WEBCAM_URL = (
@@ -75,21 +74,20 @@ class WebcamScraper:
             webcam_list.append(
                 WebcamStream(
                     cast(str, webcam_json["id"]),
+                    WebcamStatus.NONE,
+                    None,
                     [
                         category_json["id"]
                         for category_json in cast(
                             List[Dict[str, str]], webcam_json["category"]
                         )
                     ],
-                    WebcamLocation(
-                        cast(str, location_json["city"]),
-                        cast(str, location_json["region"]),
-                        cast(str, location_json["country"]),
-                        cast(str, location_json["continent"]),
-                        cast(float, location_json["latitude"]),
-                        cast(float, location_json["longitude"]),
-                    ),
-                    WebcamStatus.NONE,
+                    cast(str, location_json["city"]),
+                    cast(str, location_json["region"]),
+                    cast(str, location_json["country"]),
+                    cast(str, location_json["continent"]),
+                    cast(float, location_json["latitude"]),
+                    cast(float, location_json["longitude"]),
                 )
             )
 
