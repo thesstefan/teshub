@@ -161,6 +161,7 @@ class WebcamScraper:
         for index, webcam in enumerate(self.selected_webcams):
             webcam_dir = os.path.join(self.config.dst_dir, str(webcam.id))
             webcam.image_urls = self._get_webcam_image_urls(webcam.id)
+            webcam.image_count = len(webcam.image_urls)
 
             download_succesful = self.webcam_downloader(
                 webcam, webcam_dir, self.config
