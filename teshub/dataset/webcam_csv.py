@@ -1,169 +1,71 @@
-import logging
-import os
 from dataclasses import dataclass, field
-from typing import ClassVar, List, Optional, cast
+from enum import Enum
+from typing import Any, Callable, Optional, Type, cast
 
-import numpy as np
-import numpy.typing as npt
-import pandas as pd
+import dacite
 import pandera as pa
-from pandera.typing import Index, Series
+import pandera.typing as pat
 
+from teshub.dataset.csv_manager import CSVManager
+from teshub.typing import DataClassT
 from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 
 class WebcamRecordSchema(pa.SchemaModel):
-    id: Index[str] = pa.Field(unique=True)
-    categories: Optional[Series[str]] = pa.Field(nullable=True)
-    city: Optional[Series[str]] = pa.Field(nullable=True)
-    region: Optional[Series[str]] = pa.Field(nullable=True)
-    country: Optional[Series[str]] = pa.Field(nullable=True)
-    continent: Optional[Series[str]] = pa.Field(nullable=True)
-    latitude: Optional[Series[float]] = pa.Field(nullable=True)
-    longitude: Optional[Series[float]] = pa.Field(nullable=True)
-    image_count: Series[int] = pa.Field(gt=0)
-    status: Series[str] = pa.Field(
-        isin=cast(List[str], [status.value for status in WebcamStatus])
+    id: pat.Index[str] = pa.Field(unique=True, coerce=True)
+    status: pat.Series[str] = pa.Field(
+        isin=cast(list[str], [status.value for status in WebcamStatus])
+    )
+
+    image_count: pat.Series[int] = pa.Field(ge=0, nullable=True, coerce=True)
+    categories: Optional[pat.Series[str]] = pa.Field(nullable=True)
+
+    city: Optional[pat.Series[str]] = pa.Field(nullable=True)
+    region: Optional[pat.Series[str]] = pa.Field(nullable=True)
+    country: Optional[pat.Series[str]] = pa.Field(nullable=True)
+    continent: Optional[pat.Series[str]] = pa.Field(nullable=True)
+    latitude: Optional[pat.Series[float]] = pa.Field(
+        nullable=True, coerce=True
+    )
+    longitude: Optional[pat.Series[float]] = pa.Field(
+        nullable=True, coerce=True
     )
 
 
 @dataclass
-class WebcamCSV:
-    csv_path: str
-    _webcam_df: pd.DataFrame = field(init=False)
+class WebcamCSV(CSVManager[WebcamStream]):
+    data_class: Type[DataClassT] = field(init=False, default=WebcamStream)
 
-    record_items: ClassVar[List[str]] = [
-        "id",
-        "categories",
-        "city",
-        "region",
-        "country",
-        "continent",
-        "latitude",
-        "longitude",
-        "image_count",
-        "status",
-    ]
-
-    def _from_record_df(self, record_df: pd.DataFrame) -> List[WebcamStream]:
-        if not len(record_df):
-            return []
-
-        WebcamRecordSchema.validate(record_df)
-
-        return [
-            WebcamStream(
-                id,
-                WebcamStatus(cast(str, record["status"])),
-                cast(int, record["image_count"]),
-                cast(str, record["categories"]).split(","),
-                cast(str, record["city"]),
-                cast(str, record["region"]),
-                cast(str, record["country"]),
-                cast(str, record["continent"]),
-                cast(float, record["latitude"]),
-                cast(float, record["longitude"]),
-            )
-            for id, record in record_df.iterrows()
-        ]
-
-    def _to_record_df(self, webcams: List[WebcamStream]) -> pd.DataFrame:
-        record_df = pd.DataFrame(
-            [
-                [
-                    webcam.id,
-                    ",".join(webcam.categories) if webcam.categories else None,
-                    webcam.city,
-                    webcam.region,
-                    webcam.country,
-                    webcam.continent,
-                    float(webcam.latitude),
-                    float(webcam.longitude),
-                    len(webcam.image_urls),
-                    webcam.status.value,
-                ]
-                for webcam in webcams
-            ],
-            columns=self.record_items,
-        ).set_index("id")
-
-        WebcamRecordSchema.validate(record_df)
-
-        return record_df
-
-    def load(self) -> None:
-        try:
-            self._webcam_df = pd.read_csv(
-                self.csv_path, dtype={"id": str}
-            ).set_index("id")
-
-            if not self._webcam_df.empty:
-                WebcamRecordSchema.validate(self._webcam_df)
-
-            logging.info(
-                f"Succesfully read webcam records from {self.csv_path}"
-            )
-        except FileNotFoundError:
-            logging.warning(
-                "Record file not found. "
-                f"Will create new one at {self.csv_path} and continuing..."
-            )
-
-            self._webcam_df = pd.DataFrame(
-                columns=self.record_items
-            ).set_index("id")
-
-    def save(self) -> None:
-        csv_dir = os.path.dirname(os.path.abspath(self.csv_path))
-        if not os.path.isdir(csv_dir):
-            os.makedirs(csv_dir)
-
-        self._webcam_df.to_csv(self.csv_path, index=True)
-
-    def query_webcams(
-        self, df_query: Optional[str], count: Optional[int]
-    ) -> List[WebcamStream]:
-        query_df = (
-            self._webcam_df.query(df_query) if df_query else self._webcam_df
-        )
-
-        if count:
-            query_df = query_df.head(count)
-
-        return self._from_record_df(query_df)
-
-    def add_record(self, webcam: WebcamStream, persist: bool = True) -> None:
-        new_record = self._to_record_df([webcam])
-        self._webcam_df = pd.concat([self._webcam_df, new_record])
-
-        if persist:
-            self.save()
-
-            logging.info(
-                f"Persisted webcam record {webcam.id} in "
-                f"{self.csv_path} successfully."
-            )
-
-    def update_record_status(
-        self, webcam_id: str, status: WebcamStatus, persist: bool = True
-    ) -> None:
-        webcam_record = self._webcam_df.loc[[webcam_id]]
-        old_status = cast(str, webcam_record[["status"]].values[0][0])
-        webcam_record["status"] = status.value
-
-        WebcamRecordSchema.validate(webcam_record)
-        self._webcam_df.loc[[webcam_id]] = webcam_record
-
-        if persist:
-            self.save()
-
-            logging.info(
-                f"Changed status of webcam {webcam_id} "
-                f"from {old_status} to {status.value}. Persisted changes in "
-                f"{self.csv_path} successfully."
-            )
-
-    def exists(self, webcam: WebcamStream) -> bool:
-        return webcam.id in cast(
-            npt.NDArray[np.str_], self._webcam_df.index.values
-        )
+    df_index: Optional[str] = field(init=False, default="id")
+    df_schema: Optional[Type[pa.SchemaModel]] = field(
+        init=False, default=WebcamRecordSchema
+    )
+    df_read_converter: Optional[dict[str, Callable[[Any], Any]]] = field(
+        init=False,
+        default_factory=lambda: {
+            "categories": lambda lst: lst.strip("[]")
+            .replace("'", "")
+            .split(", "),
+        },
+    )
+    df_dtype: Optional[dict[str, Type[str | int | float]]] = field(
+        init=False, default_factory=lambda: {"id": str}
+    )
+    df_columns: list[str] = field(
+        init=False,
+        default_factory=lambda: [
+            "id",
+            "status",
+            "image_count",
+            "categories",
+            "city",
+            "region",
+            "country",
+            "continent",
+            "latitude",
+            "longitude",
+        ],
+    )
+    dacite_config: Optional[dacite.Config] = field(
+        init=False, default=dacite.Config(cast=[Enum])
+    )
