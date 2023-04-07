@@ -1,3 +1,4 @@
+import ast
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Optional, Type, cast
@@ -11,13 +12,15 @@ from teshub.typing import DataClassT
 from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 
-class WebcamRecordSchema(pa.SchemaModel):
+class WebcamStreamRecordSchema(pa.SchemaModel):
     id: pat.Index[str] = pa.Field(unique=True, coerce=True)
     status: pat.Series[str] = pa.Field(
         isin=cast(list[str], [status.value for status in WebcamStatus])
     )
 
     image_count: pat.Series[int] = pa.Field(ge=0, nullable=True, coerce=True)
+    # TODO: Check if labels string can be evaluated by
+    # ast.literal_eval as a list[str]
     categories: Optional[pat.Series[str]] = pa.Field(nullable=True)
 
     city: Optional[pat.Series[str]] = pa.Field(nullable=True)
@@ -38,14 +41,12 @@ class WebcamCSV(CSVManager[WebcamStream]):
 
     df_index: Optional[str] = field(init=False, default="id")
     df_schema: Optional[Type[pa.SchemaModel]] = field(
-        init=False, default=WebcamRecordSchema
+        init=False, default=WebcamStreamRecordSchema
     )
     df_read_converter: Optional[dict[str, Callable[[Any], Any]]] = field(
         init=False,
         default_factory=lambda: {
-            "categories": lambda lst: lst.strip("[]")
-            .replace("'", "")
-            .split(", "),
+            "categories": lambda list_str: ast.literal_eval(list_str)
         },
     )
     df_dtype: Optional[dict[str, Type[str | int | float]]] = field(
