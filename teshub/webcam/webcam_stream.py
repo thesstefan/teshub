@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List
+from typing import Optional
 
 
 class WebcamStatus(Enum):
@@ -15,20 +15,19 @@ class WebcamStatus(Enum):
 
 
 @dataclass
-class WebcamLocation:
-    city: str
-    region: str
-    country: str
-    continent: str
-    latitude: float
-    longitude: float
-
-
-@dataclass
 class WebcamStream:
     id: str
-    categories: List[str]
-    location: WebcamLocation
     status: WebcamStatus
-    image_urls: List[str] = field(init=False, default_factory=list)
-    image_paths: List[str] = field(init=False, default_factory=list)
+
+    image_count: Optional[int]
+    categories: Optional[list[str]]
+
+    city: Optional[str] = None
+    region: Optional[str] = None
+    country: Optional[str] = None
+    continent: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    image_urls: list[str] = field(init=False, default_factory=list)
+    image_paths: list[str] = field(init=False, default_factory=list)
