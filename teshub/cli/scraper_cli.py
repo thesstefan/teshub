@@ -3,7 +3,7 @@ import logging
 import os
 from typing import cast
 
-from teshub.dataset.webcam_csv import WebcamCSV
+from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.scraping.webcam_scraper import WebcamScraper
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
 
@@ -77,23 +77,17 @@ def scraper_config_from_args(args: argparse.Namespace) -> WebcamScraperConfig:
 
 
 def csv_path_from_args(args: argparse.Namespace) -> str:
-    return (
-        os.path.abspath(cast(str, args.csv_path))
-        if args.csv_path
-        else os.path.join(
-            os.path.abspath(cast(str, args.webcam_dir)), "webcam_metadata.csv"
-        )
-    )
+    return os.path.abspath(cast(str, args.csv_path)) if args.csv_path else None
 
 
 def main() -> None:
     args = parser.parse_args()
     scraper_config = scraper_config_from_args(args)
 
-    webcam_csv = WebcamCSV(csv_path_from_args(args))
-    webcam_csv.load()
-
-    WebcamScraper(scraper_config, webcam_csv).scrape_webcams()
+    webcam_dataset = WebcamDataset(
+        cast(str, os.path.abspath(args.webcam_dir)), csv_path_from_args(args)
+    )
+    WebcamScraper(scraper_config, webcam_dataset).scrape_webcams()
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
+from teshub.webcam.webcam_frame import WebcamFrame
+
 
 class WebcamStatus(str, Enum):
     NONE: str = "NONE"
@@ -32,8 +34,7 @@ class WebcamStream:
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
-    image_urls: list[str] = field(init=False, default_factory=list)
-    image_paths: list[str] = field(init=False, default_factory=list)
+    frames: list[WebcamFrame] = field(init=False, default_factory=list)
 
     def __str__(self) -> str:
         return (

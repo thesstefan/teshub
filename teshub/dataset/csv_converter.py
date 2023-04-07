@@ -41,7 +41,8 @@ class CSVConverter:
             {
                 name: value
                 for name, value in record.items()
-                if value not in [None, np.nan]
+                # x != x is the easiest way to check for NaN
+                if value is not None and value == value
             }
             for record in records
         ]
@@ -61,17 +62,21 @@ class CSVConverter:
         df_columns: list[str],
         df_index: Optional[str] = None,
         df_schema: Optional[Type[pa.SchemaModel]] = None,
+        get_property_values: bool = False,
     ) -> pd.DataFrame:
         records: list[dict[str, JSON]] = [
             cast(
                 dict[str, JSON],
                 asdict(item)
-                | {
-                    # Also get property values
-                    name: prop.__get__(item)
-                    for name, prop in vars(type(item)).items()
-                    if isinstance(prop, property)
-                },
+                | (
+                    {
+                        name: prop.__get__(item)
+                        for name, prop in vars(type(item)).items()
+                        if isinstance(prop, property)
+                    }
+                    if get_property_values
+                    else {}
+                ),
             )
             for item in data
         ]

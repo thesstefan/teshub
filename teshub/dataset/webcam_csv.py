@@ -47,6 +47,8 @@ class WebcamCSV(CSVManager[WebcamStream]):
         init=False,
         default_factory=lambda: {
             "categories": lambda list_str: ast.literal_eval(list_str)
+            if list_str
+            else None
         },
     )
     df_dtype: Optional[dict[str, Type[str | int | float]]] = field(

@@ -53,10 +53,9 @@ task_creator_parser.add_argument(
 task_creator_parser.add_argument(
     "--csv_path",
     type=str,
-    required=True,
     help=(
         "CSV file where webcam metadata is stored. "
-        "If not specified, `dataset_dir/webcam_metadata.csv` is used"
+        "If not specified, `dataset_dir/webcams.csv` is used"
     ),
 )
 task_creator_parser.add_argument(
@@ -98,13 +97,7 @@ task_creator_parser.add_argument(
 
 
 def csv_path_from_args(args: argparse.Namespace) -> str:
-    return (
-        os.path.abspath(cast(str, args.csv_path))
-        if args.csv_path
-        else os.path.join(
-            os.path.abspath(cast(str, args.webcam_dir)), "webcam_metadata.csv"
-        )
-    )
+    return os.path.abspath(cast(str, args.csv_path)) if args.csv_path else None
 
 
 def create_tasks(args: argparse.Namespace) -> None:
@@ -117,11 +110,13 @@ def create_tasks(args: argparse.Namespace) -> None:
         cvat_config, use_shared_storage=(cast(str, args.dataset_dir) == ".")
     )
 
-    webcam_csv = WebcamCSV(csv_path_from_args(args))
-    webcam_csv.load()
-    dataset = WebcamDataset(webcam_csv, cast(str, args.dataset_dir))
+    webcam_dataset = WebcamDataset(
+        cast(str, os.path.abspath(args.dataset_dir)), csv_path_from_args(args)
+    )
 
-    task_creator = WebcamAdnotationTaskCreator(cvat_task_creator, dataset)
+    task_creator = WebcamAdnotationTaskCreator(
+        cvat_task_creator, webcam_dataset
+    )
 
     task_creator.create_tasks(
         cast(int, args.task_count),

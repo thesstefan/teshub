@@ -23,19 +23,9 @@ class CSVManager(Generic[DataClassT]):
     df_columns: list[str] = field(default_factory=list)
     _df: pd.DataFrame = field(init=False)
 
-    def load(self) -> None:
+    def __post_init__(self) -> None:
         try:
-            self._df = pd.read_csv(
-                self.csv_path,
-                dtype=self.df_dtype,
-                converters=self.df_read_converter,
-            )
-
-            if self.df_index:
-                self._df.set_index(self.df_index, inplace=True)
-
-            if not self._df.empty and self.df_schema:
-                self.df_schema.validate(self._df)
+            self.load()
 
             logging.info(
                 f"Succesfully read {len(self._df)} "
@@ -47,10 +37,26 @@ class CSVManager(Generic[DataClassT]):
                 f"Will create new one at {self.csv_path} and continue..."
             )
 
-            self._df = pd.DataFrame(columns=self.df_columns)
+            self.init_empty_df()
 
-            if self.df_index:
-                self._df.set_index(self.df_index, inplace=True)
+    def load(self) -> None:
+        self._df = pd.read_csv(
+            self.csv_path,
+            dtype=self.df_dtype,
+            converters=self.df_read_converter,
+        )
+
+        if self.df_index:
+            self._df.set_index(self.df_index, inplace=True)
+
+        if not self._df.empty and self.df_schema:
+            self.df_schema.validate(self._df)
+
+    def init_empty_df(self) -> None:
+        self._df = pd.DataFrame(columns=self.df_columns)
+
+        if self.df_index:
+            self._df.set_index(self.df_index, inplace=True)
 
     def save(self) -> None:
         csv_dir = os.path.dirname(os.path.abspath(self.csv_path))
@@ -78,7 +84,9 @@ class CSVManager(Generic[DataClassT]):
             self.dacite_config,
         )
 
-    def add_record(self, item: DataClassT, persist: bool = True) -> None:
+    def add_record(
+        self, item: DataClassT, persist: bool = True, log: bool = True
+    ) -> None:
         item_df = CSVConverter.to_df(
             [item], self.df_columns, self.df_index, self.df_schema
         )
@@ -96,7 +104,10 @@ class CSVManager(Generic[DataClassT]):
         if persist:
             self.save()
 
-            logging.info(f"Persisted {item} in {self.csv_path} successfully.")
+            if log:
+                logging.info(
+                    f"Persisted {item} in {self.csv_path} successfully."
+                )
 
     def update_record(
         self,
@@ -104,6 +115,7 @@ class CSVManager(Generic[DataClassT]):
         # TODO: Use some generic type (numpy dtype?)
         update_dict: dict[str, str | int | float | bool],
         persist: bool = True,
+        log: bool = True,
     ) -> None:
         if id in update_dict.keys():
             raise RuntimeError("Can't update record ID!")
@@ -118,9 +130,10 @@ class CSVManager(Generic[DataClassT]):
         if persist:
             self.save()
 
-            logging.info(
-                f"Updated {self.data_class.__name__}({id}) "
-                f"with new values in {self.csv_path}:"
-            )
+            if log:
+                logging.info(
+                    f"Updated {self.data_class.__name__}({id}) "
+                    f"with new values in {self.csv_path}:"
+                )
             for name, value in update_dict.items():
                 logging.info(f"\t\t{name} -> {value}")

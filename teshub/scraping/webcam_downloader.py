@@ -9,6 +9,7 @@ from typing import Awaitable, List, Optional, cast
 import aiofiles
 import requests
 from aiohttp.client import ClientSession
+
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
 from teshub.webcam.webcam_stream import WebcamStream
 
@@ -80,15 +81,21 @@ class AsyncWebcamDownloader(WebcamDownloader):
         )
 
         async with ClientSession() as http_session:
-            for image_url in self.webcam.image_urls:
+            for frame in self.webcam.frames:
+                if not frame.url:
+                    raise RuntimeError(
+                        f"Frame {frame} from {self.webcam} does "
+                        "not have an associated URL!"
+                    )
+
                 image_dst_path = os.path.join(
-                    self.dst_dir, os.path.basename(image_url)
+                    self.dst_dir, os.path.basename(frame.url)
                 )
 
                 download_tasks.append(
                     asyncio.wait_for(
                         self._download_image(
-                            image_url,
+                            frame.url,
                             image_dst_path,
                             http_session,
                             semaphore,
@@ -123,9 +130,15 @@ class SequentialWebcamDownloader(WebcamDownloader):
             image_file.write(response.content)
 
     def _download_webcam_images(self) -> None:
-        for image_url in self.webcam.image_urls:
+        for frame in self.webcam.frames:
+            if not frame.url:
+                raise RuntimeError(
+                    f"Frame {frame} from {self.webcam} does "
+                    "not have an associated URL!"
+                )
+
             image_dst_path = os.path.join(
-                self.dst_dir, os.path.basename(image_url)
+                self.dst_dir, os.path.basename(frame.url)
             )
 
-            self._download_image(image_url, image_dst_path)
+            self._download_image(frame.url, image_dst_path)

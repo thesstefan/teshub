@@ -8,12 +8,13 @@ from typing import Callable, Dict, List, Optional, Type, Union, cast
 import requests
 from bs4 import BeautifulSoup
 
-from teshub.dataset.webcam_csv import WebcamCSV
+from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.scraping.webcam_downloader import (AsyncWebcamDownloader,
                                                SequentialWebcamDownloader,
                                                WebcamDownloader)
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
 from teshub.typing import JSON
+from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 
 WINDY_API_URL = "https://api.windy.com/api/webcams/v2/list"
@@ -25,7 +26,7 @@ EMBED_WINDY_WEBCAM_URL = (
 @dataclass
 class WebcamScraper:
     config: WebcamScraperConfig
-    webcam_csv: WebcamCSV
+    webcam_dataset: WebcamDataset
     webcam_downloader: Type[WebcamDownloader] = field(
         init=False, default=AsyncWebcamDownloader
     )
@@ -132,7 +133,9 @@ class WebcamScraper:
                 filter(
                     cast(
                         Callable[[WebcamStream], bool],
-                        lambda webcam: not self.webcam_csv.exists(webcam.id),
+                        lambda webcam: not self.webcam_dataset.webcam_exists(
+                            webcam.id
+                        ),
                     ),
                     self._request_webcam_list(request_url),
                 )
@@ -160,8 +163,20 @@ class WebcamScraper:
 
         for index, webcam in enumerate(self.selected_webcams):
             webcam_dir = os.path.join(self.config.dst_dir, str(webcam.id))
-            webcam.image_urls = self._get_webcam_image_urls(webcam.id)
-            webcam.image_count = len(webcam.image_urls)
+
+            image_urls = self._get_webcam_image_urls(webcam.id)
+
+            webcam.frames = [
+                WebcamFrame(
+                    os.path.basename(url),
+                    # Nothing is persisted if download is not succesful, so
+                    # it's safe to assign status beforehand
+                    status=WebcamFrameStatus.DOWNLOADED,
+                    url=url,
+                )
+                for url in image_urls
+            ]
+            webcam.image_count = len(image_urls)
 
             download_succesful = self.webcam_downloader(
                 webcam, webcam_dir, self.config
@@ -171,7 +186,7 @@ class WebcamScraper:
                 continue
 
             webcam.status = WebcamStatus.DOWNLOADED
-            self.webcam_csv.add_record(webcam, persist=True)
+            self.webcam_dataset.add_webcam(webcam)
 
             logging.info(
                 f"Scraped {index + 1}/{self.config.webcam_count} streams\n"
