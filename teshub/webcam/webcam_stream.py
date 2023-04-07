@@ -19,8 +19,8 @@ class WebcamStream:
     id: str
     status: WebcamStatus
 
-    image_count: Optional[int]
-    categories: Optional[list[str]]
+    image_count: Optional[int] = None
+    categories: Optional[list[str]] = None
 
     city: Optional[str] = None
     region: Optional[str] = None
