@@ -132,7 +132,7 @@ class WebcamScraper:
                 filter(
                     cast(
                         Callable[[WebcamStream], bool],
-                        lambda webcam: not self.webcam_csv.exists(webcam),
+                        lambda webcam: not self.webcam_csv.exists(webcam.id),
                     ),
                     self._request_webcam_list(request_url),
                 )
