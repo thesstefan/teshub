@@ -3,12 +3,12 @@ from enum import Enum
 from typing import Optional
 
 
-class WebcamStatus(Enum):
+class WebcamStatus(str, Enum):
     NONE: str = "NONE"
     DOWNLOADED: str = "DOWNLOADED"
     TASK_CREATED: str = "TASK_CREATED"
-    PARTIALLY_ADNOTATED: str = "PARTIALLY_ADNOTATED"
-    ADNOTATED: str = "ADNOTATED"
+    PARTIALLY_ANNOTATED: str = "PARTIALLY_ANNOTATED"
+    ANNOTATED: str = "ANNOTATED"
     VERIFIED: str = "VERIFIED"
     RUN_INFERENCE: str = "RUN_INFERENCE"
     VERIFIED_INFERENCE: str = "VERIFIED_WITH_INFERENCE"
@@ -31,3 +31,9 @@ class WebcamStream:
 
     image_urls: list[str] = field(init=False, default_factory=list)
     image_paths: list[str] = field(init=False, default_factory=list)
+
+    def __str__(self) -> str:
+        return (
+            f"WebcamStream(id={self.id}, status={self.status}, "
+            f"image_count={self.image_count})"
+        )
