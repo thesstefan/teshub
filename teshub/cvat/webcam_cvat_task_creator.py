@@ -29,18 +29,18 @@ class WebcamAdnotationTaskCreator:
                     project_id,
                     owner_id,
                     assignee_id,
-                    webcam.image_paths,
+                    [frame.file_name for frame in webcam.frames],
                 )
             except Exception as e:
                 logging.error(e)
 
                 continue
 
-            self.webcam_dataset.webcam_csv.update_record(
-                webcam.id, {'status': WebcamStatus.TASK_CREATED}, persist=True
+            self.webcam_dataset.update_webcam_status(
+                webcam.id, WebcamStatus.TASK_CREATED
             )
 
             logging.info(
                 f"Successfully created task {webcam.id} "
-                f"with {len(webcam.image_paths)} images\n"
+                f"with {len(webcam.frames)} images\n"
             )
