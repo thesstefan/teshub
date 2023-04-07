@@ -36,7 +36,7 @@ class WebcamDataset:
         count: Optional[int],
         fill_images: bool = True,
     ) -> List[WebcamStream]:
-        webcams = self.webcam_csv.query_webcams(df_query, count)
+        webcams = self.webcam_csv.query_records(df_query, count)
 
         if fill_images:
             for webcam in webcams:

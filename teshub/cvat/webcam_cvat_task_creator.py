@@ -36,8 +36,8 @@ class WebcamAdnotationTaskCreator:
 
                 continue
 
-            self.webcam_dataset.webcam_csv.update_record_status(
-                webcam.id, WebcamStatus.TASK_CREATED, persist=True
+            self.webcam_dataset.webcam_csv.update_record(
+                webcam.id, {'status': WebcamStatus.TASK_CREATED}, persist=True
             )
 
             logging.info(
