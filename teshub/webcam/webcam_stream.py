@@ -13,6 +13,9 @@ class WebcamStatus(str, Enum):
     RUN_INFERENCE: str = "RUN_INFERENCE"
     VERIFIED_INFERENCE: str = "VERIFIED_WITH_INFERENCE"
 
+    def __str__(self) -> str:
+        return self.name
+
 
 @dataclass
 class WebcamStream:
