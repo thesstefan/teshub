@@ -2,7 +2,6 @@ from dataclasses import asdict
 from typing import ItemsView, Optional, Type, cast
 
 import dacite
-import numpy as np
 import pandas as pd
 import pandera as pa
 
