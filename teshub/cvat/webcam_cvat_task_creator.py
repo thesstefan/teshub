@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass
 
 from teshub.cvat.cvat_task_creator import CVATTaskCreator
@@ -29,7 +30,10 @@ class WebcamAdnotationTaskCreator:
                     project_id,
                     owner_id,
                     assignee_id,
-                    [frame.file_name for frame in webcam.frames],
+                    [
+                        os.path.join({webcam.id}, frame.file_name)
+                        for frame in webcam.frames
+                    ],
                 )
             except Exception as e:
                 logging.error(e)
