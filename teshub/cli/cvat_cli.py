@@ -1,39 +1,37 @@
 import argparse
-import logging
 import os
 from typing import cast
 
 from cvat_sdk.api_client import Configuration as CVATConfiguration
 
-from teshub.cvat.cvat_task_creator import CVATTaskCreator
-from teshub.cvat.webcam_cvat_task_creator import WebcamAdnotationTaskCreator
-from teshub.dataset.webcam_csv import WebcamCSV
+from teshub.annotation.cvat.cvat_manager import CVATManager
+from teshub.annotation.webcam_annotation_manager import WebcamAnnotationManager
 from teshub.dataset.webcam_dataset import WebcamDataset
-
-logging.basicConfig(
-    encoding="utf-8",
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("cvat_task_creator.log"),
-        logging.StreamHandler(),
-    ],
-)
 
 parser = argparse.ArgumentParser(
     prog="teshub_cvat",
     description="Provides tooling for CVAT interaction",
 )
-subparsers = parser.add_subparsers(
-    required=True,
-    title="subcommands",
-    description="Valid subcommands",
-    help="Additional help",
+
+parser.add_argument(
+    "--cvat_host",
+    type=str,
+    default="localhost:8080",
+    help="CVAT host endpoint",
 )
-
-task_creator_parser = subparsers.add_parser("task_creator")
-
-task_creator_parser.add_argument(
+parser.add_argument(
+    "--cvat_username",
+    required=True,
+    type=str,
+    help=("CVAT username"),
+)
+parser.add_argument(
+    "--cvat_password",
+    required=True,
+    type=str,
+    help=("CVAT password"),
+)
+parser.add_argument(
     "--dataset_dir",
     type=str,
     default=".",
@@ -44,13 +42,13 @@ task_creator_parser.add_argument(
         "image paths from the current directory"
     ),
 )
-task_creator_parser.add_argument(
-    "--cvat_host",
-    type=str,
-    default="localhost:8080",
-    help="CVAT host endpoint",
+parser.add_argument(
+    "--project_id",
+    required=True,
+    type=int,
+    help=("The ID of the project to create the jobs in"),
 )
-task_creator_parser.add_argument(
+parser.add_argument(
     "--csv_path",
     type=str,
     help=(
@@ -58,41 +56,35 @@ task_creator_parser.add_argument(
         "If not specified, `dataset_dir/webcams.csv` is used"
     ),
 )
-task_creator_parser.add_argument(
-    "--task_count",
+
+
+subparsers = parser.add_subparsers(
+    required=True,
+    title="subcommands",
+    description="Valid subcommands",
+    help="Additional help",
+)
+
+job_create_parser = subparsers.add_parser("job_create")
+job_sync_parser = subparsers.add_parser("job_sync")
+
+job_create_parser.add_argument(
+    "--job_count",
     required=True,
     type=int,
-    help=("Upper bound of number of tasks to create."),
+    help=("Upper bound of number of jobs to create."),
 )
-task_creator_parser.add_argument(
-    "--cvat_username",
-    required=True,
-    type=str,
-    help=("CVAT username"),
-)
-task_creator_parser.add_argument(
-    "--cvat_password",
-    required=True,
-    type=str,
-    help=("CVAT password"),
-)
-task_creator_parser.add_argument(
+job_create_parser.add_argument(
     "--owner_id",
     required=True,
     type=int,
-    help=("The ID of the task owner"),
+    help=("The ID of the job owner"),
 )
-task_creator_parser.add_argument(
-    "--project_id",
-    required=True,
-    type=int,
-    help=("The ID of the project to create the tasks in"),
-)
-task_creator_parser.add_argument(
+job_create_parser.add_argument(
     "--assignee_id",
     required=True,
     type=int,
-    help=("The ID of the user to assign the tasks to"),
+    help=("The ID of the user to assign the jobs to"),
 )
 
 
@@ -100,26 +92,17 @@ def csv_path_from_args(args: argparse.Namespace) -> str:
     return os.path.abspath(cast(str, args.csv_path)) if args.csv_path else None
 
 
-def create_tasks(args: argparse.Namespace) -> None:
-    cvat_config = CVATConfiguration(
-        host=cast(str, args.cvat_host),
-        username=cast(str, args.cvat_username),
-        password=cast(str, args.cvat_password),
-    )
-    cvat_task_creator = CVATTaskCreator(
-        cvat_config, use_shared_storage=(cast(str, args.dataset_dir) == ".")
-    )
+def sync_jobs(
+    annotation_manager: WebcamAnnotationManager, args: argparse.Namespace
+) -> None:
+    annotation_manager.sync(cast(int, args.project_id))
 
-    webcam_dataset = WebcamDataset(
-        cast(str, os.path.abspath(args.dataset_dir)), csv_path_from_args(args)
-    )
 
-    task_creator = WebcamAdnotationTaskCreator(
-        cvat_task_creator, webcam_dataset
-    )
-
-    task_creator.create_tasks(
-        cast(int, args.task_count),
+def create_jobs(
+    annotation_manager: WebcamAnnotationManager, args: argparse.Namespace
+) -> None:
+    annotation_manager.create_tasks(
+        cast(int, args.job_count),
         cast(int, args.project_id),
         cast(int, args.owner_id),
         cast(int, args.assignee_id),
@@ -127,10 +110,28 @@ def create_tasks(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    task_creator_parser.set_defaults(func=create_tasks)
+    job_create_parser.set_defaults(func=create_jobs)
+    job_sync_parser.set_defaults(func=sync_jobs)
 
     args = parser.parse_args()
-    args.func(args)
+
+    cvat_config = CVATConfiguration(
+        host=cast(str, args.cvat_host),
+        username=cast(str, args.cvat_username),
+        password=cast(str, args.cvat_password),
+    )
+
+    webcam_dataset = WebcamDataset(
+        cast(str, os.path.abspath(args.dataset_dir)), csv_path_from_args(args)
+    )
+
+    cvat_manager = CVATManager(
+        cvat_config, use_shared_storage=(cast(str, args.dataset_dir) == ".")
+    )
+
+    annotation_manager = WebcamAnnotationManager(cvat_manager, webcam_dataset)
+
+    args.func(annotation_manager, args)
 
 
 if __name__ == "__main__":
