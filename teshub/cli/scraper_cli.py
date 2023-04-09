@@ -1,18 +1,10 @@
 import argparse
-import logging
 import os
 from typing import cast
 
 from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.scraping.webcam_scraper import WebcamScraper
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
-
-logging.basicConfig(
-    encoding="utf-8",
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.FileHandler("scraper.log"), logging.StreamHandler()],
-)
 
 parser = argparse.ArgumentParser(
     prog="windy_scraper",
