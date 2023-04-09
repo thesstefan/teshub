@@ -65,8 +65,19 @@ class CSVManager(Generic[DataClassT]):
 
         self._df.to_csv(self.csv_path, index=self.df_index is not None)
 
+        logging.info(f"Succesfully persisted changes in {self.csv_path}")
+
     def exists(self, id: str) -> bool:
         return self.df_index and id in self._df.index
+
+    def get(self, id: str) -> DataClassT:
+        return CSVConverter.from_df(
+            self._df.loc[[id]],
+            self.data_class,
+            self.df_index,
+            self.df_schema,
+            self.dacite_config,
+        )[0]
 
     def query_records(
         self, df_query: Optional[str] = None, count: Optional[int] = None
@@ -101,13 +112,11 @@ class CSVManager(Generic[DataClassT]):
 
         self._df = pd.concat([self._df, item_df])
 
+        if log:
+            logging.info(f"Persisted {item} in {self.csv_path} successfully.")
+
         if persist:
             self.save()
-
-            if log:
-                logging.info(
-                    f"Persisted {item} in {self.csv_path} successfully."
-                )
 
     def update_record(
         self,
@@ -127,13 +136,13 @@ class CSVManager(Generic[DataClassT]):
 
         self._df.loc[[id]] = record
 
-        if persist:
-            self.save()
-
-            if log:
-                logging.info(
-                    f"Updated {self.data_class.__name__}({id}) "
-                    f"with new values in {self.csv_path}:"
-                )
+        if log:
+            logging.info(
+                f"Updated {self.data_class.__name__}({id}) "
+                f"with new values in {self.csv_path}:"
+            )
             for name, value in update_dict.items():
                 logging.info(f"\t\t{name} -> {value}")
+
+        if persist:
+            self.save()
