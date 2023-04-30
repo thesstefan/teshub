@@ -89,7 +89,6 @@ class WebcamAnnotationManager:
                 continue
 
             if job.job_state == "rejected":
-                logging.info()
                 logging.info(
                     f"Annotation job for webcam {webcam.id} is rejected. "
                     "Removing webcam...\n"
@@ -102,8 +101,8 @@ class WebcamAnnotationManager:
 
             if job.job_state == "completed":
                 logging.info(
-                    f"\nAnnotation job for webcam {webcam.id} is completed. "
-                    "Starting sync..."
+                    f"Annotation job for webcam {webcam.id} is completed. "
+                    "Starting sync...\n"
                 )
 
                 self.webcam_dataset.delete_frames(
