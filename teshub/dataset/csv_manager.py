@@ -79,6 +79,15 @@ class CSVManager(Generic[DataClassT]):
             self.dacite_config,
         )[0]
 
+    def get_by_iloc(self, iloc: int) -> DataClassT:
+        return CSVConverter.from_df(
+            self._df.iloc[[id]],
+            self.data_class,
+            self.df_index,
+            self.df_schema,
+            self.dacite_config,
+        )[0]
+
     def query_records(
         self, df_query: Optional[str] = None, count: Optional[int] = None
     ) -> list[DataClassT]:

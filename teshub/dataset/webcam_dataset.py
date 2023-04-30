@@ -32,7 +32,7 @@ class WebcamDataset:
 
         logging.info("Successfully loaded dataset!\n")
 
-    def fill_webcam_image_paths(self, webcam: WebcamStream) -> None:
+    def fill_webcam_frames(self, webcam: WebcamStream) -> None:
         webcam_dir = os.path.join(self.data_dir, webcam.id)
 
         if not os.path.isdir(webcam_dir):
@@ -44,13 +44,17 @@ class WebcamDataset:
 
         webcam.frames = frame_csv.query_records()
 
+        for frame in webcam.frames:
+            frame.webcam_id = webcam.id
+            frame.load_dir = webcam_dir
+
     def get_webcam(
         self, webcam_id: str, fill_frames: bool = True
     ) -> WebcamStream:
         webcam = self._webcam_csv.get_webcam(webcam_id)
 
         if fill_frames:
-            self.fill_webcam_image_paths(webcam)
+            self.fill_webcam_frames(webcam)
 
         return webcam
 
@@ -64,7 +68,7 @@ class WebcamDataset:
 
         if fill_frames:
             for webcam in webcams:
-                self.fill_webcam_image_paths(webcam)
+                self.fill_webcam_frames(webcam)
 
         return webcams
 
@@ -201,3 +205,9 @@ class WebcamDataset:
 
         # TODO: Know when fully annotated
         self.update_webcam_status(webcam_id, WebcamStatus.PARTIALLY_ANNOTATED)
+
+    def get_by_iloc(self, iloc: int) -> WebcamStream:
+        webcam = self.webcam_csv.get_by_iloc(iloc)
+        self.fill_webcam_frames(webcam)
+
+        return webcam
