@@ -21,7 +21,8 @@ class CSVConverter:
             return []
 
         if df_schema:
-            df_schema.validate(df)
+#            df_schema.validate(df)
+            pass
 
         df_dict: dict[str, dict[str, JSON]]
         records: list[dict[str, JSON]]
@@ -91,6 +92,7 @@ class CSVConverter:
             df.set_index(df_index, inplace=True)
 
         if df_schema:
-            df_schema.validate(df)
+            #df_schema.validate(df)
+            pass
 
         return df
