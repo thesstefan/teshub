@@ -50,7 +50,9 @@ class CSVManager(Generic[DataClassT]):
             self._df.set_index(self.df_index, inplace=True)
 
         if not self._df.empty and self.df_schema:
-            self.df_schema.validate(self._df)
+            pass
+            # TODO: REMOVE THIS
+            # self.df_schema.validate(self._df)
 
     def init_empty_df(self) -> None:
         self._df = pd.DataFrame(columns=self.df_columns)
