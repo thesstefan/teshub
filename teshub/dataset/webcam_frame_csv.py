@@ -18,9 +18,6 @@ class WebcamFrameRecordSchema(pa.SchemaModel):
         isin=cast(list[str], [status.value for status in WebcamFrameStatus])
     )
     segmentation_path: pat.Series[str] = pa.Field(nullable=True, coerce=True)
-
-    # TODO: Check if labels string can be evaluated by
-    # ast.literal_eval as dict[str, float]
     labels: pat.Series[str] = pa.Field(nullable=True, coerce=True)
 
 
