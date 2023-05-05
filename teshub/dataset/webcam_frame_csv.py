@@ -50,5 +50,5 @@ class WebcamFrameCSV(CSVManager[WebcamFrame]):
         ],
     )
     dacite_config: Optional[dacite.Config] = field(
-        init=False, default=dacite.Config(cast=[Enum])
+        init=False, default_factory=lambda: dacite.Config(cast=[Enum])
     )
