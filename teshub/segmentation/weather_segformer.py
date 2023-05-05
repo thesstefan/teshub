@@ -1,73 +1,62 @@
-from dataclasses import dataclass, field
-from typing import ClassVar
+# mypy: disable-error-code="misc, no-any-unimported"
+# lightning, torchmetrics and transformers don't have typing stubs
 
-import lightning.pytorch as pl
+from dataclasses import dataclass, field
+
+import lightning.pytorch as pl  # type: ignore[import]
 import torch
-import torchmetrics
+from torchmetrics import (  # type: ignore[import]
+    MetricCollection, JaccardIndex, Accuracy
+)
 from torch import nn
 from torch.utils.data import DataLoader
-from transformers import SegformerForSemanticSegmentation
+from transformers import (  # type: ignore[import]
+    SegformerForSemanticSegmentation
+)
+from teshub.segmentation.utils import DEFAULT_LABEL2ID, DEFAULT_ID2LABEL
 
 
 @dataclass(eq=False)
-class WeatherSegformerFinetuner(pl.LightningModule):
-    id2label: ClassVar[dict[int, str]] = {
-        0: "background",
-        1: "black_clouds",
-        2: "white_clouds",
-        3: "blue_sky",
-        4: "gray_sky",
-        5: "white_sky",
-        6: "fog",
-        7: "sun",
-        8: "snow",
-        9: "shadow",
-        10: "wet_ground",
-    }
-    label2id: ClassVar[dict[str, int]] = {
-        "background": 0,
-        "black_clouds": 1,
-        "white_clouds": 2,
-        "blue_sky": 3,
-        "gray_sky": 4,
-        "white_sky": 5,
-        "fog": 6,
-        "sun": 7,
-        "snow": 8,
-        "shadow": 9,
-        "wet_ground": 10,
-    }
+class WeatherSegformer(pl.LightningModule):
+    label2id: dict[str, int] = field(default_factory=lambda: DEFAULT_LABEL2ID)
+    id2label: dict[int, str] = field(default_factory=lambda: DEFAULT_ID2LABEL)
 
-    train_loader: DataLoader
-    val_loader: DataLoader
+    train_loader: DataLoader[dict[str, torch.Tensor]] | None = None
+    val_loader: DataLoader[dict[str, torch.Tensor]] | None = None
+
+    lr: float = 6 * 10e-05
 
     metrics_interval: int = 100
-    pretrained_model: str = "nvidia/mit-b0"
+    pretrained_model_name: str = "nvidia/mit-b0"
 
-    model: nn.Module = field(init=False)
-    train_metrics: torchmetrics.MetricCollection = field(init=False)
-    val_metrics: torchmetrics.MetricCollection = field(init=False)
+    _train_metrics: MetricCollection = (
+        field(init=False)
+    )
+    _val_metrics: MetricCollection = (
+        field(init=False)
+    )
+    _segformer: nn.Module = field(init=False)
 
     def __post_init__(self) -> None:
         super().__init__()
 
-        self.model: nn.Module = (
+        self._segformer: nn.Module = (
             SegformerForSemanticSegmentation.from_pretrained(
-                self.pretrained_model,
+                self.pretrained_model_name,
                 num_labels=len(self.id2label),
                 id2label=self.id2label,
                 label2id=self.label2id,
             )
         )
 
-        metrics = torchmetrics.MetricCollection(
+        metrics = MetricCollection(
             {
-                "mean_iou": torchmetrics.classification.JaccardIndex(
+                "mean_iou": JaccardIndex(
                     task="multiclass",
                     num_classes=len(self.label2id),
                     average="macro",
                 ),
-                "mean_acc": torchmetrics.classification.Accuracy(
+                "mean_acc": Accuracy(
                     task="multiclass",
                     num_classes=len(self.label2id),
                     average="macro",
@@ -79,14 +68,13 @@ class WeatherSegformerFinetuner(pl.LightningModule):
         self.val_metrics = metrics.clone()
 
     def forward(
-        self, images: torch.Tensor, masks: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        output: tuple[torch.Tensor, ...] = self.model(
+        self, images: torch.Tensor, masks: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, ...]:
+        output: tuple[torch.Tensor, ...] = self._segformer(
             pixel_values=images, labels=masks, return_dict=False
         )
-        loss, logits = output
 
-        return loss, logits
+        return output
 
     def _get_predicted(
         self, logits: torch.Tensor, size: torch.Size
@@ -100,7 +88,7 @@ class WeatherSegformerFinetuner(pl.LightningModule):
     def _compute_loss_and_update_metrics(
         self,
         batch: dict[str, torch.Tensor],
-        metrics: torchmetrics.MetricCollection,
+        metrics: MetricCollection,
     ) -> torch.Tensor:
         images, masks = batch["pixel_values"], batch["labels"]
 
@@ -122,7 +110,7 @@ class WeatherSegformerFinetuner(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
 
         if batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.train_metrics.compute(), prog_bar=True)
+            self.log_dict(self.train_metrics.compute(), on_epoch=True)
 
         return loss
 
@@ -136,16 +124,16 @@ class WeatherSegformerFinetuner(pl.LightningModule):
         self.log("val_loss", loss, prog_bar=True)
 
         if batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.val_metrics.compute(), prog_bar=True)
+            self.log_dict(self.val_metrics.compute(), on_epoch=True)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
-            [p for p in self.parameters() if p.requires_grad],
-            lr=0.00006,
+            [param for param in self.parameters() if param.requires_grad],
+            lr=self.lr
         )
 
-    def train_dataloader(self) -> DataLoader:
+    def train_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
         return self.train_loader
 
-    def val_dataloader(self) -> DataLoader:
+    def val_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
         return self.val_loader

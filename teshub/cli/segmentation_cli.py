@@ -1,28 +1,30 @@
 import argparse
 import os
-from typing import cast
-
-import lightning.pytorch as pl
-import torch
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
-from PIL.Image import Image
-from torch.utils.data import DataLoader
-from transformers import SegformerImageProcessor
+from dataclasses import dataclass
 
 from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.segmentation.weather2seg import Weather2SegDataset
-from teshub.segmentation.weather_segformer_v2 import WeatherSegformerFinetuner
+from teshub.segmentation.predictor import SegmentationPredictor
+from teshub.segmentation.trainer import SegmentationTrainer
 
 parser = argparse.ArgumentParser(
     prog="teshub_segmentation",
     description=(
         "Provides tooling for running weather"
-        "segmentation/classification model",
+        "segmentation/classification model"
     ),
 )
+subparsers = parser.add_subparsers(
+    required=True,
+    title="subcommands",
+    description="Valid subcommands",
+    help="Additional help",
+)
 
-parser.add_argument(
+train_parser = subparsers.add_parser("train")
+predict_parser = subparsers.add_parser("predict")
+
+train_parser.add_argument(
     "--csv_path",
     type=str,
     help=(
@@ -30,89 +32,80 @@ parser.add_argument(
         "If not specified, `dataset_dir/webcams.csv` is used"
     ),
 )
-parser.add_argument(
+train_parser.add_argument(
     "--dataset_dir",
     type=str,
     default=".",
     help=(
-        "Directory where webcam streams are stored. "
-        "If specified, local CVAT storage will be used. "
-        "Otherwise, will attempt to use shared CVAT storage with "
-        "image paths from the current directory"
+        "Directory where webcam streams and metadata are stored. "
     ),
 )
 
+predict_parser.add_argument(
+    "--image_path", type=str, help="Input image for inference", required=True
+)
+predict_parser.add_argument(
+    "--model_checkpoint_path",
+    type=str,
+    help="Path to model checkpoint to be used",
+    required=True,
+)
 
-def csv_path_from_args(args: argparse.Namespace) -> str:
-    return os.path.abspath(cast(str, args.csv_path)) if args.csv_path else None
+
+@dataclass(kw_only=True)
+class Arguments:
+    dataset_dir: str | None = None
+    csv_path: str | None = None
+    image_path: str | None = None
+    model_checkpoint_path: str | None = None
+
+
+def csv_path_from_args(args: Arguments) -> str | None:
+    return os.path.abspath(args.csv_path) if args.csv_path else None
+
+
+def train(args: Arguments) -> None:
+    assert (args.dataset_dir)
+
+    webcam_dataset = WebcamDataset(
+        os.path.abspath(args.dataset_dir), csv_path_from_args(args)
+    )
+    weather2seg = Weather2SegDataset(webcam_dataset)
+
+    trainer = SegmentationTrainer(
+        weather2seg,
+        pretrained_model_name='nvidia/mit-b1',
+        split_ratio=0.9,
+        batch_size=2,
+        metrics_interval=5,
+        tb_log_dir="tb_logs",
+        resume_checkpoint=None
+    )
+
+    trainer.fit()
+
+
+def predict(args: Arguments) -> None:
+    assert (args.model_checkpoint_path)
+    assert (args.image_path)
+
+    predictor = SegmentationPredictor(
+        model_checkpoint_path=args.model_checkpoint_path,
+        pretrained_model_name='nvidia/mit-b1'
+    )
+
+    prediction = predictor.predict(args.image_path)
+
+    # TODO: Implement visualization module or something
 
 
 def main() -> None:
+    train_parser.set_defaults(func=train)
+    predict_parser.set_defaults(func=predict)
+
     args = parser.parse_args()
 
-    webcam_dataset = WebcamDataset(
-        cast(str, os.path.abspath(args.dataset_dir)), csv_path_from_args(args)
-    )
-
-    # TODO: Move this somewhere else
-    def feature_extractor(image: Image, segmentation: Image) -> torch.Tensor:
-        encoded_inputs = SegformerImageProcessor()(
-            image,
-            segmentation,
-            return_tensors="pt",
-        )
-
-        labels_1d = [
-            Weather2SegDataset.color2id[tuple(label_color.tolist())]
-            for label_color in encoded_inputs["labels"].view(-1, 3)
-        ]
-        encoded_inputs["labels"] = torch.tensor(labels_1d).view(512, 512, 1)
-
-        for categories, values in encoded_inputs.items():
-            values.squeeze_()
-
-        return encoded_inputs
-
-    weather2seg = Weather2SegDataset(webcam_dataset, feature_extractor)
-
-    train_size = int(len(weather2seg) * 0.9)
-    val_size = len(weather2seg) - train_size
-
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        weather2seg, [train_size, val_size]
-    )
-
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=2, shuffle=True, num_workers=6
-    )
-    val_dataloader = DataLoader(val_dataset, batch_size=2, num_workers=6)
-
-    finetuner = WeatherSegformerFinetuner(
-        pretrained_model="nvidia/mit-b0",
-        train_loader=train_dataloader,
-        val_loader=val_dataloader,
-        metrics_interval=5,
-    )
-
-    # TODO: Add CLI params for settings
-    logger = TensorBoardLogger("tb_logs", name="weather_segformer")
-    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_loss")
-    early_stop_callback = EarlyStopping(
-        monitor="val_loss",
-        min_delta=0.00,
-        patience=10,
-        verbose=False,
-        mode="min",
-    )
-
-    trainer = pl.Trainer(
-        max_epochs=200,
-        val_check_interval=len(train_dataloader),
-        logger=logger,
-        callbacks=[early_stop_callback, checkpoint_callback],
-    )
-
-    trainer.fit(finetuner)
+    args.func(args)
 
 
 if __name__ == "__main__":

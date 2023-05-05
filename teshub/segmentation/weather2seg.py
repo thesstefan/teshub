@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Callable, ClassVar
 
 import torch
 from PIL.Image import Image
@@ -8,50 +7,69 @@ from torch.utils.data import Dataset
 from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 from teshub.webcam.webcam_stream import WebcamStatus
+from teshub.segmentation.utils import DEFAULT_ID2COLOR, DEFAULT_COLOR2ID
+
+from transformers import SegformerImageProcessor  # type: ignore[import]
 
 
 @dataclass
-class Weather2SegDataset(Dataset):
+class Weather2SegDataset(Dataset[dict[str, torch.Tensor]]):
     webcam_dataset: WebcamDataset
-    feature_extractor: Callable[[Image, Image], torch.Tensor]
+
+    color2id: dict[tuple[int, ...], int] = field(
+        default_factory=lambda: DEFAULT_COLOR2ID)
+    id2color: dict[int, tuple[int, ...]] = field(
+        default_factory=lambda: DEFAULT_ID2COLOR)
 
     frames: list[WebcamFrame] = field(init=False, default_factory=list)
-
-    color2id: ClassVar[dict[tuple[int], str]] = {
-        (0, 0, 0): 0,
-        (22, 21, 22): 1,
-        (204, 204, 204): 2,
-        (46, 6, 243): 3,
-        (154, 147, 185): 4,
-        (198, 233, 255): 5,
-        (255, 53, 94): 6,
-        (250, 250, 55): 7,
-        (255, 255, 255): 8,
-        (115, 51, 128): 9,
-        (36, 179, 83): 10,
-    }
-    id2color: ClassVar[dict[tuple[int], str]] = {
-        color: id for (id, color) in color2id.items()
-    }
 
     def __post_init__(self) -> None:
         annotated_webcams = self.webcam_dataset.get_webcams_with_status(
             WebcamStatus.PARTIALLY_ANNOTATED
         )
 
+        def is_manually_annotated_frame(frame: WebcamFrame) -> bool:
+            # TODO: Change this to manual annotation
+            return frame.status == WebcamFrameStatus.SYNTHETIC_ANNOTATION
+
         for webcam in annotated_webcams:
             self.frames.extend(
-                filter(
-                    lambda frame: frame.status
-                    == WebcamFrameStatus.SYNTHETIC_ANNOTATION,
-                    webcam.frames,
-                )
+                filter(is_manually_annotated_frame, webcam.frames)
             )
 
-    def __len__(self):
+    @staticmethod
+    def feature_extractor(
+        image: Image,
+        segmentation: Image | None = None,
+        color2id: dict[tuple[int, ...], int] = DEFAULT_COLOR2ID
+    ) -> dict[str, torch.Tensor]:
+
+        encoded_inputs: dict[str, torch.Tensor] = SegformerImageProcessor()(
+            image,
+            segmentation,
+            return_tensors="pt",
+        )
+
+        # TODO: Find a better way of doing this and not break mypy
+        labels_1d: list[int] = []
+        color_tensor: torch.Tensor
+        for color_tensor in encoded_inputs["labels"].view(-1, 3):
+            color_list: list[int] = color_tensor.tolist()
+            color_tuple = tuple(color_list)
+
+            labels_1d.append(color2id[color_tuple])
+
+        encoded_inputs["labels"] = torch.tensor(labels_1d).view(512, 512, 1)
+
+        for categories, values in encoded_inputs.items():
+            values.squeeze_()
+
+        return encoded_inputs
+
+    def __len__(self) -> int:
         return len(self.frames)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         encoded_inputs = self.feature_extractor(
             self.frames[idx].image,
             self.frames[idx].segmentation,
