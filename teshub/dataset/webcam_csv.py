@@ -21,7 +21,7 @@ class WebcamStreamRecordSchema(pa.SchemaModel):
     image_count: pat.Series[int] = pa.Field(ge=0, nullable=True, coerce=True)
     # TODO: Check if labels string can be evaluated by
     # ast.literal_eval as a list[str]
-    categories: Optional[pat.Series[str]] = pa.Field(nullable=True)
+    categories: Optional[pat.Series[str]] = pa.Field(nullable=True, coerce=True)
 
     city: Optional[pat.Series[str]] = pa.Field(nullable=True)
     region: Optional[pat.Series[str]] = pa.Field(nullable=True)
