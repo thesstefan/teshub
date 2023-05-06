@@ -36,10 +36,12 @@ class SegmentationPredictor:
 
         # TODO: Update
         batch_size = 2
-        pixel_values_batch = pixel_values.repeat(batch_size, 1, 1, 1)
+        pixel_values_batch = pixel_values.repeat(
+            batch_size, 1, 1, 1
+        ).to(self.map_location)
 
         outputs: tuple[torch.Tensor, ...] = self.model(pixel_values_batch)
         predicted = upsample_logits(
             outputs[0], size=torch.Size([image.size[1], image.size[0]]))
 
-        return predicted
+        return predicted.cpu()
