@@ -13,7 +13,7 @@ from teshub.scraping.webcam_downloader import (AsyncWebcamDownloader,
                                                SequentialWebcamDownloader,
                                                WebcamDownloader)
 from teshub.scraping.webcam_scraper_config import WebcamScraperConfig
-from teshub.typing import JSON
+from teshub.extra_typing import JSON
 from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 from teshub.webcam.webcam_stream import WebcamStatus, WebcamStream
 

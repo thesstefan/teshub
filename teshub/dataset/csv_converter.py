@@ -5,7 +5,7 @@ import dacite
 import pandas as pd
 import pandera as pa
 
-from teshub.typing import JSON, DataClassT
+from teshub.extra_typing import JSON, DataClassT
 
 
 class CSVConverter:
