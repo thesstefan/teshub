@@ -27,20 +27,21 @@ class WeatherSegformer(pl.LightningModule):
     val_loader: DataLoader[dict[str, torch.Tensor]] | None = None
 
     lr: float = 6 * 10e-05
+    pretrained_model_name: str = "nvidia/mit-b1"
+    batch_size: int | None = field(init=False, default=None)
 
     metrics_interval: int = 100
-    pretrained_model_name: str = "nvidia/mit-b1"
 
-    _train_metrics: MetricCollection = (
-        field(init=False)
-    )
-    _val_metrics: MetricCollection = (
-        field(init=False)
-    )
+    train_metrics: MetricCollection = field(init=False)
+    val_metrics: MetricCollection = field(init=False)
+
     _segformer: nn.Module = field(init=False)
 
     def __post_init__(self) -> None:
         super().__init__()
+
+        if self.train_loader:
+            self.batch_size = self.train_loader.batch_size
 
         self._segformer: nn.Module = (
             SegformerForSemanticSegmentation.from_pretrained(
@@ -68,6 +69,9 @@ class WeatherSegformer(pl.LightningModule):
 
         self.train_metrics = metrics.clone()
         self.val_metrics = metrics.clone()
+
+        self.save_hyperparameters("batch_size", "pretrained_model_name", "lr")
+
 
     def forward(
         self, images: torch.Tensor, masks: torch.Tensor | None = None

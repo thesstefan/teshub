@@ -96,7 +96,6 @@ def predict(args: Arguments) -> None:
 
     predictor = SegmentationPredictor(
         model_checkpoint_path=args.model_checkpoint_path,
-        pretrained_model_name='nvidia/mit-b2'
     )
 
     prediction = predictor.predict(args.image_path)
