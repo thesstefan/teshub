@@ -1,3 +1,4 @@
+from PIL import Image
 import argparse
 import os
 from dataclasses import dataclass
@@ -6,6 +7,10 @@ from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.segmentation.weather2seg import Weather2SegDataset
 from teshub.segmentation.predictor import SegmentationPredictor
 from teshub.segmentation.trainer import SegmentationTrainer
+from teshub.segmentation.utils import DEFAULT_ID2COLOR
+from teshub.visualization.transforms import seg_mask_to_image
+
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
     prog="teshub_segmentation",
@@ -91,12 +96,18 @@ def predict(args: Arguments) -> None:
 
     predictor = SegmentationPredictor(
         model_checkpoint_path=args.model_checkpoint_path,
-        pretrained_model_name='nvidia/mit-b1'
+        pretrained_model_name='nvidia/mit-b2'
     )
 
     prediction = predictor.predict(args.image_path)
+    predicted_img = seg_mask_to_image(prediction[0], DEFAULT_ID2COLOR)
 
-    # TODO: Implement visualization module or something
+    # TODO: Create elaborate visualization tools in
+    # visualization module
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(5, 3))
+    axes[0].imshow(Image.open(args.image_path))
+    axes[1].imshow(predicted_img)
+    plt.show()
 
 
 def main() -> None:

@@ -1,3 +1,6 @@
+import torch
+from torch import nn
+
 DEFAULT_ID2COLOR: dict[int, tuple[int, ...]] = {
     0: (0, 0, 0),
     1: (22, 21, 22),
@@ -33,3 +36,11 @@ DEFAULT_ID2LABEL: dict[int, str] = {
 DEFAULT_LABEL2ID = {
     label: id for (id, label) in DEFAULT_ID2LABEL.items()
 }
+
+
+def upsample_logits(logits: torch.Tensor, size: torch.Size) -> torch.Tensor:
+    upsampled_logits: torch.Tensor = nn.functional.interpolate(
+        logits, size=size, mode="bilinear", align_corners=False
+    )
+
+    return upsampled_logits.argmax(dim=1)

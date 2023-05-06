@@ -1,12 +1,10 @@
-from dataclasses import field
+from dataclasses import field, dataclass
 import torch
-from dataclasses import dataclass
 from torch import nn
 
 from teshub.segmentation.weather2seg import Weather2SegDataset
 from teshub.segmentation.weather_segformer import WeatherSegformer
-
-from transformers import SegformerImageProcessor  # type: ignore[import]
+from teshub.segmentation.utils import upsample_logits
 
 from PIL import Image
 
@@ -26,19 +24,22 @@ class SegmentationPredictor:
         self.model = WeatherSegformer.load_from_checkpoint(  # type: ignore
             self.model_checkpoint_path,
             map_location=self.map_location,
-            pretrained_model=self.pretrained_model_name
+            pretrained_model=self.pretrained_model_name,
         )
 
-    def predict(self, image_path: str) -> torch.Tensor:
-        image = Image.open(image_path)
+    def predict(self, image: str | Image.Image) -> torch.Tensor:
+        if isinstance(image, str):
+            image = Image.open(image)
+
         pixel_values = Weather2SegDataset.feature_extractor(image)[
             "pixel_values"]
 
+        # TODO: Update
         batch_size = 2
-        pixel_values_batch = pixel_values.repeat(batch_size, 1, 1)
+        pixel_values_batch = pixel_values.repeat(batch_size, 1, 1, 1)
 
         outputs: tuple[torch.Tensor, ...] = self.model(pixel_values_batch)
-        predicted: torch.Tensor = SegformerImageProcessor(  # type: ignore
-        ).post_process_semantic_segmentation(outputs)
+        predicted = upsample_logits(
+            outputs[0], size=torch.Size([image.size[1], image.size[0]]))
 
         return predicted

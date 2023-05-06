@@ -53,13 +53,16 @@ class Weather2SegDataset(Dataset[dict[str, torch.Tensor]]):
         # TODO: Find a better way of doing this and not break mypy
         labels_1d: list[int] = []
         color_tensor: torch.Tensor
-        for color_tensor in encoded_inputs["labels"].view(-1, 3):
-            color_list: list[int] = color_tensor.tolist()
-            color_tuple = tuple(color_list)
 
-            labels_1d.append(color2id[color_tuple])
+        if segmentation:
+            for color_tensor in encoded_inputs["labels"].view(-1, 3):
+                color_list: list[int] = color_tensor.tolist()
+                color_tuple = tuple(color_list)
 
-        encoded_inputs["labels"] = torch.tensor(labels_1d).view(512, 512, 1)
+                labels_1d.append(color2id[color_tuple])
+
+            encoded_inputs["labels"] = torch.tensor(
+                labels_1d).view(512, 512, 1)
 
         for categories, values in encoded_inputs.items():
             values.squeeze_()
