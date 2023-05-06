@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from typing import TypeAlias, cast
 
 DEFAULT_ID2COLOR: dict[int, tuple[int, ...]] = {
     0: (0, 0, 0),
@@ -38,9 +39,25 @@ DEFAULT_LABEL2ID = {
 }
 
 
+# Should this be moved to teshub.extra_typing?
+# Not sure if introducing the torch dependency there is worth it
+NestedTorchDict: TypeAlias = (
+    dict[str, "NestedTorchDict"] | list["NestedTorchDict"] | str | int |
+    float | bool | None | torch.Tensor
+)
+
+
 def upsample_logits(logits: torch.Tensor, size: torch.Size) -> torch.Tensor:
     upsampled_logits: torch.Tensor = nn.functional.interpolate(
         logits, size=size, mode="bilinear", align_corners=False
     )
 
     return upsampled_logits.argmax(dim=1)
+
+
+def load_model_hyperparams_from_checkpoint(
+    checkpoint_path: str
+) -> dict[str, NestedTorchDict]:
+    checkpoint: dict[str, NestedTorchDict] = torch.load(checkpoint_path)
+
+    return cast(dict[str, NestedTorchDict], checkpoint['hyper_parameters'])
