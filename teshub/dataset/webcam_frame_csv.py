@@ -8,7 +8,7 @@ import pandera as pa
 import pandera.typing as pat
 
 from teshub.dataset.csv_manager import CSVManager
-from teshub.typing import DataClassT
+from teshub.extra_typing import DataClassT
 from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 
 

@@ -7,7 +7,7 @@ import pandas as pd
 import pandera as pa
 
 from teshub.dataset.csv_converter import CSVConverter
-from teshub.typing import DataClassT
+from teshub.extra_typing import DataClassT
 
 
 @dataclass
