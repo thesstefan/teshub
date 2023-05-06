@@ -13,7 +13,9 @@ from torch.utils.data import DataLoader
 from transformers import (  # type: ignore[import]
     SegformerForSemanticSegmentation
 )
-from teshub.segmentation.utils import DEFAULT_LABEL2ID, DEFAULT_ID2LABEL
+from teshub.segmentation.utils import (
+    DEFAULT_LABEL2ID, DEFAULT_ID2LABEL, upsample_logits
+)
 
 
 @dataclass(eq=False)
@@ -27,7 +29,7 @@ class WeatherSegformer(pl.LightningModule):
     lr: float = 6 * 10e-05
 
     metrics_interval: int = 100
-    pretrained_model_name: str = "nvidia/mit-b0"
+    pretrained_model_name: str = "nvidia/mit-b1"
 
     _train_metrics: MetricCollection = (
         field(init=False)
@@ -76,15 +78,6 @@ class WeatherSegformer(pl.LightningModule):
 
         return output
 
-    def _get_predicted(
-        self, logits: torch.Tensor, size: torch.Size
-    ) -> torch.Tensor:
-        upsampled_logits: torch.Tensor = nn.functional.interpolate(
-            logits, size=size, mode="bilinear", align_corners=False
-        )
-
-        return upsampled_logits.argmax(dim=1)
-
     def _compute_loss_and_update_metrics(
         self,
         batch: dict[str, torch.Tensor],
@@ -95,7 +88,7 @@ class WeatherSegformer(pl.LightningModule):
         outputs = self.forward(images, masks)
         loss, logits = outputs
 
-        predicted = self._get_predicted(logits, size=masks.shape[-2:])
+        predicted = upsample_logits(logits, size=masks.shape[-2:])
         metrics.update(predicted, masks)
 
         return loss
