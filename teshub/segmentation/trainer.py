@@ -15,10 +15,11 @@ import lightning.pytorch as pl  # type: ignore[import]
 class SegmentationTrainer:
     weather2seg: Weather2SegDataset
     pretrained_model_name: str
-    split_ratio: float = 0.9
-    batch_size: int = 2
-    metrics_interval: int = 5
-    tb_log_dir: str = "tb_logs"
+    split_ratio: float
+    batch_size: int
+    metrics_interval: int
+    tb_log_dir: str
+    lr: float
     resume_checkpoint: str | None = None
 
     def fit(self) -> None:
@@ -40,7 +41,8 @@ class SegmentationTrainer:
             pretrained_model_name=self.pretrained_model_name,
             train_loader=train_dataloader,
             val_loader=val_dataloader,
-            metrics_interval=self.metrics_interval
+            metrics_interval=self.metrics_interval,
+            lr=self.lr
         )
 
         logger = TensorBoardLogger(  # type: ignore[misc]
