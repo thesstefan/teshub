@@ -27,8 +27,6 @@ subparsers = parser.add_subparsers(
 )
 
 train_parser = subparsers.add_parser("train")
-predict_parser = subparsers.add_parser("predict")
-
 train_parser.add_argument(
     "--csv_path",
     type=str,
@@ -42,12 +40,50 @@ train_parser.add_argument(
     type=str,
     default=".",
     help=(
-        "Directory where webcam streams and metadata are stored. "
+        "Directory where webcam streams and metadata are stored"
     ),
 )
+train_parser.add_argument(
+    "--batch_size",
+    type=int,
+    default=2
+)
+train_parser.add_argument(
+    "--pretrained_model_name",
+    type=str,
+    default="nvidia/mit-b1"
+)
+train_parser.add_argument(
+    "--metrics_interval",
+    type=int,
+    default=5
+)
+train_parser.add_argument(
+    "--train_val_split_ratio",
+    type=float,
+    default=0.9
+)
+train_parser.add_argument(
+    "--lr",
+    type=float,
+    default=6 * 10e-05
+)
+train_parser.add_argument(
+    "--resume_training_checkpoint_path",
+    type=str
+)
+train_parser.add_argument(
+    "--tb_logdir",
+    type=str,
+    default="tb_logs"
+)
 
+predict_parser = subparsers.add_parser("predict")
 predict_parser.add_argument(
-    "--image_path", type=str, help="Input image for inference", required=True
+    "--image_path",
+    type=str,
+    help="Path to image to be used for inference",
+    required=True
 )
 predict_parser.add_argument(
     "--model_checkpoint_path",
@@ -59,8 +95,17 @@ predict_parser.add_argument(
 
 @dataclass(kw_only=True)
 class Arguments:
-    dataset_dir: str | None = None
+    dataset_dir: str
+    batch_size: int
+    pretrained_model_name: str
+    metrics_interval: int
+    train_val_split_ratio: float
+    tb_logdir: str
+    lr: float
+
     csv_path: str | None = None
+    resume_training_checkpoint_path: str | None = None
+
     image_path: str | None = None
     model_checkpoint_path: str | None = None
 
@@ -70,8 +115,6 @@ def csv_path_from_args(args: Arguments) -> str | None:
 
 
 def train(args: Arguments) -> None:
-    assert (args.dataset_dir)
-
     webcam_dataset = WebcamDataset(
         os.path.abspath(args.dataset_dir), csv_path_from_args(args)
     )
@@ -79,12 +122,13 @@ def train(args: Arguments) -> None:
 
     trainer = SegmentationTrainer(
         weather2seg,
-        pretrained_model_name='nvidia/mit-b1',
-        split_ratio=0.9,
-        batch_size=2,
-        metrics_interval=5,
-        tb_log_dir="tb_logs",
-        resume_checkpoint=None
+        pretrained_model_name=args.pretrained_model_name,
+        split_ratio=args.train_val_split_ratio,
+        batch_size=args.batch_size,
+        metrics_interval=args.metrics_interval,
+        tb_log_dir=args.tb_logdir,
+        lr=args.lr,
+        resume_checkpoint=args.resume_training_checkpoint_path
     )
 
     trainer.fit()

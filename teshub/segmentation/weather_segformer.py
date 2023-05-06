@@ -20,18 +20,18 @@ from teshub.segmentation.utils import (
 
 @dataclass(eq=False)
 class WeatherSegformer(pl.LightningModule):
+    pretrained_model_name: str
+    lr: float
+
     label2id: dict[str, int] = field(default_factory=lambda: DEFAULT_LABEL2ID)
     id2label: dict[int, str] = field(default_factory=lambda: DEFAULT_ID2LABEL)
 
     train_loader: DataLoader[dict[str, torch.Tensor]] | None = None
     val_loader: DataLoader[dict[str, torch.Tensor]] | None = None
 
-    lr: float = 6 * 10e-05
-    pretrained_model_name: str = "nvidia/mit-b1"
-    batch_size: int | None = field(init=False, default=None)
-
     metrics_interval: int = 100
 
+    batch_size: int | None = field(init=False, default=None)
     train_metrics: MetricCollection = field(init=False)
     val_metrics: MetricCollection = field(init=False)
 
