@@ -56,8 +56,10 @@ def upsample_logits(logits: torch.Tensor, size: torch.Size) -> torch.Tensor:
 
 
 def load_model_hyperparams_from_checkpoint(
-    checkpoint_path: str
+    checkpoint_path: str,
+    device: torch.device
 ) -> dict[str, NestedTorchDict]:
-    checkpoint: dict[str, NestedTorchDict] = torch.load(checkpoint_path)
+    checkpoint: dict[str, NestedTorchDict] = torch.load(
+        checkpoint_path, map_location=device)
 
     return cast(dict[str, NestedTorchDict], checkpoint['hyper_parameters'])
