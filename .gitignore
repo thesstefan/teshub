@@ -219,6 +219,7 @@ acs-*.bib
 # amsthm
 *.thm
 
+*.ckpt
 # beamer
 *.nav
 *.pre
