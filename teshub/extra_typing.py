@@ -5,3 +5,5 @@ JSON: TypeAlias = (
 )
 
 DataClassT = TypeVar("DataClassT")
+
+Color: TypeAlias = tuple[int, int, int]

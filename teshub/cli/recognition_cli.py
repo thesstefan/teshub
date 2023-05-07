@@ -4,16 +4,16 @@ import os
 from dataclasses import dataclass
 
 from teshub.dataset.webcam_dataset import WebcamDataset
-from teshub.segmentation.weather2seg import Weather2SegDataset
-from teshub.segmentation.predictor import SegmentationPredictor
-from teshub.segmentation.trainer import SegmentationTrainer
-from teshub.segmentation.utils import DEFAULT_ID2COLOR
+from teshub.recognition.weather2info import Weather2InfoDataset
+from teshub.recognition.predictor import WeatherInFormerPredictor
+from teshub.recognition.trainer import WeatherInFormerTrainer
+from teshub.recognition.utils import DEFAULT_SEG_COLORS
 from teshub.visualization.transforms import seg_mask_to_image
 
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
-    prog="teshub_segmentation",
+    prog="teshub_recognition",
     description=(
         "Provides tooling for running weather"
         "segmentation/classification model"
@@ -49,7 +49,7 @@ train_parser.add_argument(
     default=2
 )
 train_parser.add_argument(
-    "--pretrained_model_name",
+    "--pretrained_segformer_model",
     type=str,
     default="nvidia/mit-b1"
 )
@@ -77,6 +77,27 @@ train_parser.add_argument(
     type=str,
     default="tb_logs"
 )
+train_parser.add_argument(
+    "--seg_loss_weight",
+    type=float,
+    default=0.5
+)
+train_parser.add_argument(
+    "--reg_loss_weight",
+    type=float,
+    default=0.5
+)
+train_parser.add_argument(
+    "--reg_loss_used",
+    type=str,
+    default='mse'
+)
+train_parser.add_argument(
+    "--early_stop",
+    action=argparse.BooleanOptionalAction,
+    type=bool,
+    default=True
+)
 
 predict_parser = subparsers.add_parser("predict")
 predict_parser.add_argument(
@@ -97,11 +118,19 @@ predict_parser.add_argument(
 class Arguments:
     dataset_dir: str
     batch_size: int
-    pretrained_model_name: str
-    metrics_interval: int
-    train_val_split_ratio: float
-    tb_logdir: str
+
+    pretrained_segformer_model: str
     lr: float
+    seg_loss_weight: float
+    reg_loss_weight: float
+    reg_loss_used: str
+
+    train_val_split_ratio: float
+
+    tb_logdir: str
+    early_stop: bool
+
+    metrics_interval: int
 
     csv_path: str | None = None
     resume_training_checkpoint_path: str | None = None
@@ -118,16 +147,21 @@ def train(args: Arguments) -> None:
     webcam_dataset = WebcamDataset(
         os.path.abspath(args.dataset_dir), csv_path_from_args(args)
     )
-    weather2seg = Weather2SegDataset(webcam_dataset)
+    weather2seg = Weather2InfoDataset(webcam_dataset)
 
-    trainer = SegmentationTrainer(
+    trainer = WeatherInFormerTrainer(
         weather2seg,
-        pretrained_model_name=args.pretrained_model_name,
-        split_ratio=args.train_val_split_ratio,
+        pretrained_segformer_model=args.pretrained_segformer_model,
+        lr=args.lr,
+
+        seg_loss_weight=args.seg_loss_weight,
+        reg_loss_weight=args.reg_loss_weight,
+        reg_loss_used=args.reg_loss_used,
+
         batch_size=args.batch_size,
         metrics_interval=args.metrics_interval,
+        train_val_split_ratio=args.train_val_split_ratio,
         tb_log_dir=args.tb_logdir,
-        lr=args.lr,
         resume_checkpoint=args.resume_training_checkpoint_path
     )
 
@@ -135,15 +169,15 @@ def train(args: Arguments) -> None:
 
 
 def predict(args: Arguments) -> None:
-    assert (args.model_checkpoint_path)
-    assert (args.image_path)
+    assert args.model_checkpoint_path
+    assert args.image_path
 
-    predictor = SegmentationPredictor(
+    predictor = WeatherInFormerPredictor(
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
     prediction = predictor.predict(args.image_path)
-    predicted_img = seg_mask_to_image(prediction[0], DEFAULT_ID2COLOR)
+    predicted_img = seg_mask_to_image(prediction[0], DEFAULT_SEG_COLORS)
 
     # TODO: Create elaborate visualization tools in
     # visualization module
@@ -159,7 +193,10 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    args.func(args)
+    args_dict = dict(vars(args))
+    args_dict.pop('func')
+
+    args.func(Arguments(**args_dict))
 
 
 if __name__ == "__main__":
