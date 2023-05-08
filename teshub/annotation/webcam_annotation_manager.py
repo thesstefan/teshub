@@ -113,7 +113,7 @@ class WebcamAnnotationManager:
                     webcam.id,
                     job.segmentation_masks,
                     job.labels,
-                    synthetic=True,
+                    synthetic=False,
                 )
                 synchronized_jobs_count += 1
 

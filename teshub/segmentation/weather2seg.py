@@ -29,8 +29,7 @@ class Weather2SegDataset(Dataset[dict[str, torch.Tensor]]):
         )
 
         def is_manually_annotated_frame(frame: WebcamFrame) -> bool:
-            # TODO: Change this to manual annotation
-            return frame.status == WebcamFrameStatus.SYNTHETIC_ANNOTATION
+            return frame.status == WebcamFrameStatus.MANUALLY_ANNOTATED
 
         for webcam in annotated_webcams:
             self.frames.extend(

@@ -27,7 +27,8 @@ class SegmentationPredictor:
 
     def __post_init__(self) -> None:
         hparams: dict[str, NestedTorchDict] = (
-            load_model_hyperparams_from_checkpoint(self.model_checkpoint_path)
+            load_model_hyperparams_from_checkpoint(
+                self.model_checkpoint_path, device=self.map_location)
         )
         assert hparams
 

@@ -72,7 +72,6 @@ class WeatherSegformer(pl.LightningModule):
 
         self.save_hyperparameters("batch_size", "pretrained_model_name", "lr")
 
-
     def forward(
         self, images: torch.Tensor, masks: torch.Tensor | None = None
     ) -> tuple[torch.Tensor, ...]:
