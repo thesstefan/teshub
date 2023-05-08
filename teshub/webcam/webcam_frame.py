@@ -10,8 +10,8 @@ class WebcamFrameStatus(str, Enum):
     NONE: str = "NONE"
     DOWNLOADED: str = "DOWNLOADED"
     DELETED: str = "DELETED"
-    MANUAL_ANNOTATION: str = "MANUAL_ANNOTATION"
-    SYNTHETIC_ANNOTATION: str = "SYNTHETIC_ANNOTATION"
+    MANUALLY_ANNOTATED: str = "MANUALLY_ANNOTATED"
+    AUTOMATICALLY_ANNOTATED: str = "AUTOMATICALLY_ANNOTATED"
 
     def __str__(self) -> str:
         return self.name
