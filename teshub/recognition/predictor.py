@@ -6,9 +6,10 @@ from teshub.recognition.weather_informer import WeatherInFormer
 from teshub.recognition.utils import (
     upsample_logits, load_model_hyperparams_from_checkpoint, NestedTorchDict,
     DEFAULT_SEG_COLOR2ID, DEFAULT_LABELS, DEFAULT_SEG_LABELS,
-    DEFAULT_SEG_LABEL2ID
+    DEFAULT_SEG_LABEL2ID, DEFAULT_SEG_COLORS
 )
 from typing import cast
+from teshub.visualization.transforms import seg_mask_to_image
 
 from PIL import Image
 
@@ -73,3 +74,18 @@ class WeatherInFormerPredictor:
             seg_mask_output, size=torch.Size([image.size[1], image.size[0]]))
 
         return predicted_seg.cpu(), predicted_labels.cpu()
+
+    def predict_and_process(
+        self,
+        image: str | Image.Image
+    ) -> tuple[Image.Image, dict[str, float]]:
+        seg_prediction: torch.Tensor
+        labels_prediction: torch.Tensor
+
+        seg_prediction, labels_prediction = self.predict(image)
+
+        return (
+            seg_mask_to_image(seg_prediction[0], DEFAULT_SEG_COLORS),
+            dict(zip(DEFAULT_LABELS, cast(
+                list[float], labels_prediction[0].tolist())))
+        )
