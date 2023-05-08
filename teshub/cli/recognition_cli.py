@@ -186,15 +186,13 @@ def predict(args: Arguments) -> None:
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
-    prediction, labels = predictor.predict(args.image_path)
-    predicted_img = seg_mask_to_image(prediction[0], DEFAULT_SEG_COLORS)
-    print(labels)
+    segmentation, labels = predictor.predict_and_process(args.image_path)
 
     # TODO: Create elaborate visualization tools in
     # visualization module
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(5, 3))
     axes[0].imshow(Image.open(args.image_path))
-    axes[1].imshow(predicted_img)
+    axes[1].imshow(segmentation)
     plt.show()
 
 
