@@ -20,7 +20,8 @@ class WeatherInFormerTrainer:
     weather2info: Weather2InfoDataset
 
     pretrained_segformer_model: str
-    lr: float
+    seg_lr: float
+    reg_lr: float
 
     seg_loss_weight: float
     reg_loss_weight: float
@@ -75,7 +76,9 @@ class WeatherInFormerTrainer:
 
         model = WeatherInFormer(
             pretrained_segformer_model=self.pretrained_segformer_model,
-            lr=self.lr,
+            seg_lr=self.seg_lr,
+            reg_lr=self.reg_lr,
+
             seg_loss_weight=self.seg_loss_weight,
             reg_loss_weight=self.reg_loss_weight,
             reg_loss_criterion=self._choose_reg_loss_criterion(
