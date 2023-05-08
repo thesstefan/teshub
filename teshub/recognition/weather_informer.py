@@ -100,7 +100,6 @@ class WeatherInFormer(pl.LightningModule):
                         "mse": MeanSquaredError(),
                         "mae": MeanAbsoluteError()
                     },
-                    prefix=f"{phase}_reg",
                     prefix=prefix
                 )
 
