@@ -2,7 +2,6 @@
 # lightning, torchmetrics and transformers don't have typing stubs
 
 from dataclasses import dataclass, field
-import itertools
 
 import lightning.pytorch as pl  # type: ignore[import]
 import torch
@@ -37,8 +36,12 @@ class WeatherInFormer(pl.LightningModule):
     batch_size: int | None = field(init=False, default=None)
 
     metrics_interval: int = 100
-    metrics: dict[str, dict[str, MetricCollection]] = field(
-        init=False, default_factory=lambda: {'train': {}, 'val': {}})
+
+    train_seg_metrics: MetricCollection = field(init=False)
+    train_reg_metrics: MetricCollection = field(init=False)
+
+    val_seg_metrics: MetricCollection = field(init=False)
+    val_reg_metrics: MetricCollection = field(init=False)
 
     _segformer: nn.Module = field(init=False)
     _regression: nn.Module = field(init=False)
@@ -71,7 +74,9 @@ class WeatherInFormer(pl.LightningModule):
             "seg_loss_weight", "reg_loss_weight", "reg_loss_criterion"
         )
 
-    def _construct_metrics(self, phase: str, task: str) -> MetricCollection:
+    def _construct_metric(self, phase: str, task: str) -> MetricCollection:
+        prefix = f"{phase}_{task}"
+
         match task:
             case "seg":
                 return MetricCollection(
@@ -87,8 +92,7 @@ class WeatherInFormer(pl.LightningModule):
                             average="macro",
                         ),
                     },
-                    prefix="seg",
-                    postfix=phase
+                    prefix=prefix
                 )
             case "reg":
                 return MetricCollection(
@@ -96,18 +100,16 @@ class WeatherInFormer(pl.LightningModule):
                         "mse": MeanSquaredError(),
                         "mae": MeanAbsoluteError()
                     },
-                    prefix="reg",
-                    postfix=phase
+                    prefix=f"{phase}_reg",
+                    prefix=prefix
                 )
-            case _:
-                raise RuntimeError(
-                    "Invalid task for constructing "
-                    f"metrics {task} (use seg or reg)")
 
     def _init_metrics(self) -> None:
-        for phase, task in itertools.product(
-                ['train', 'val'], ['seg', 'reg']):
-            self.metrics[phase][task] = self._construct_metrics(phase, task)
+        self.train_seg_metrics = self._construct_metric('train', 'seg')
+        self.train_reg_metrics = self._construct_metric('train', 'seg')
+
+        self.val_reg_metrics = self._construct_metric('val', 'reg')
+        self.val_seg_metrics = self._construct_metric('val', 'seg')
 
     def forward(
         self,
@@ -151,12 +153,17 @@ class WeatherInFormer(pl.LightningModule):
 
         predicted_masks = upsample_logits(seg_logits, size=masks.shape[-2:])
 
-        self.metrics[phase]['seg'].update(predicted_masks, masks)
-        self.metrics[phase]['reg'].update(predicted_labels, labels)
+        match phase:
+            case 'train':
+                self.train_seg_metrics.update(predicted_masks, masks)
+                self.train_reg_metrics.update(predicted_labels, labels)
+            case 'val':
+                self.val_seg_metrics.update(predicted_masks, masks)
+                self.val_reg_metrics.update(predicted_labels, labels)
 
         return (
+            seg_loss * self.seg_loss_weight + reg_loss * self.reg_loss_weight,
             seg_loss, reg_loss,
-            seg_loss * self.seg_loss_weight + reg_loss * self.reg_loss_weight
         )
 
     def _log_losses(
@@ -177,9 +184,9 @@ class WeatherInFormer(pl.LightningModule):
         self._log_losses(*losses, phase='train')
 
         if batch_idx and batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.metrics['train']['seg'].compute(),
+            self.log_dict(self.train_seg_metrics.compute(),
                           on_epoch=True)
-            self.log_dict(self.metrics['train']['reg'].compute(),
+            self.log_dict(self.train_reg_metrics.compute(),
                           on_epoch=True)
 
         return losses[0]
@@ -191,16 +198,23 @@ class WeatherInFormer(pl.LightningModule):
         self._log_losses(*losses, phase='val')
 
         if batch_idx and batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.metrics['val']['seg'].compute(),
+            self.log_dict(self.val_seg_metrics.compute(),
                           on_epoch=True)
-            self.log_dict(self.metrics['val']['reg'].compute(),
+            self.log_dict(self.val_reg_metrics.compute(),
                           on_epoch=True)
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.AdamW(
-            [param for param in self.parameters() if param.requires_grad],
-            lr=self.lr
-        )
+    def configure_optimizers(
+        self
+    ) -> tuple[
+        list[torch.optim.Optimizer],
+        list[torch.optim.lr_scheduler._LRScheduler]
+    ]:
+        return [
+            torch.optim.AdamW(
+                [param for param in self.parameters() if param.requires_grad],
+                lr=self.lr
+            ),
+        ], []
 
     def train_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
         return self.train_loader
