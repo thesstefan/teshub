@@ -21,7 +21,8 @@ from typing import Type
 @dataclass(eq=False)
 class WeatherInFormer(pl.LightningModule):
     pretrained_segformer_model: str
-    lr: float
+    seg_lr: float
+    reg_lr: float
 
     seg_loss_weight: float
     reg_loss_weight: float
@@ -70,8 +71,9 @@ class WeatherInFormer(pl.LightningModule):
 
         self._init_metrics()
         self.save_hyperparameters(
-            "batch_size", "pretrained_segformer_model", "lr",
-            "seg_loss_weight", "reg_loss_weight", "reg_loss_criterion"
+            "batch_size", "pretrained_segformer_model",
+            "seg_loss_weight", "reg_loss_weight", "reg_loss_criterion",
+            "reg_lr", "seg_lr"
         )
 
     def _construct_metric(self, phase: str, task: str) -> MetricCollection:
@@ -208,12 +210,18 @@ class WeatherInFormer(pl.LightningModule):
         list[torch.optim.Optimizer],
         list[torch.optim.lr_scheduler._LRScheduler]
     ]:
-        return [
-            torch.optim.AdamW(
-                [param for param in self.parameters() if param.requires_grad],
-                lr=self.lr
-            ),
-        ], []
+        return [torch.optim.AdamW([
+            {
+                'params': [param for param in self._segformer.parameters()
+                           if param.requires_grad],
+                'lr': self.seg_lr
+            },
+            {
+                'params': [param for param in self._regression.parameters()
+                           if param.requires_grad],
+                'lr': self.reg_lr
+            }
+        ])], []
 
     def train_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
         return self.train_loader

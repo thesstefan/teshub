@@ -64,9 +64,14 @@ train_parser.add_argument(
     default=0.9
 )
 train_parser.add_argument(
-    "--lr",
+    "--seg_lr",
     type=float,
     default=6 * 10e-05
+)
+train_parser.add_argument(
+    "--reg_lr",
+    type=float,
+    default=1 * 10e-05
 )
 train_parser.add_argument(
     "--resume_training_checkpoint_path",
@@ -120,7 +125,8 @@ class Arguments:
     batch_size: int
 
     pretrained_segformer_model: str
-    lr: float
+    seg_lr: float
+    reg_lr: float
     seg_loss_weight: float
     reg_loss_weight: float
     reg_loss_used: str
@@ -152,7 +158,8 @@ def train(args: Arguments) -> None:
     trainer = WeatherInFormerTrainer(
         weather2seg,
         pretrained_segformer_model=args.pretrained_segformer_model,
-        lr=args.lr,
+        seg_lr=args.seg_lr,
+        reg_lr=args.reg_lr,
 
         seg_loss_weight=args.seg_loss_weight,
         reg_loss_weight=args.reg_loss_weight,
