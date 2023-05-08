@@ -1,10 +1,9 @@
 import logging
 import io
+import json
 
 from typing import cast
-from teshub.server.app.ml_models import seg_predictor
-from teshub.segmentation.utils import DEFAULT_ID2COLOR
-from teshub.visualization.transforms import seg_mask_to_image
+from teshub.server.app.ml_models import weather_informer_predictor
 from PIL import Image
 
 
@@ -22,11 +21,13 @@ def predict() -> flask.Response:
     image_bytes: bytes = image_file.read()
     image = Image.open(io.BytesIO(image_bytes))
 
-    predicted_seg = seg_predictor.predict(image)
-    seg_image = seg_mask_to_image(predicted_seg[0], DEFAULT_ID2COLOR)
+    seg_mask, labels = weather_informer_predictor.predict_and_process(image)
 
     seg_bytes = io.BytesIO()
-    seg_image.save(seg_bytes, 'png', quality=100)
+    seg_mask.save(seg_bytes, 'png', quality=100)
     seg_bytes.seek(0)
 
-    return flask.send_file(seg_bytes, mimetype='image/png')
+    response = flask.send_file(seg_bytes, mimetype='image/png')
+    response.headers['labels'] = json.dumps(labels)
+
+    return response
