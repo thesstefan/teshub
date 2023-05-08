@@ -135,7 +135,7 @@ class WeatherInFormer(pl.LightningModule):
             reg_loss = self._reg_loss_fn(reg_output, labels)
             reg_output = (reg_loss, reg_output)
         else:
-            reg_output = (reg_output)
+            reg_output = (reg_output, )
 
         return segformer_output, reg_output
 
