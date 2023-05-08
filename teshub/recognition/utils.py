@@ -2,42 +2,50 @@ import torch
 from torch import nn
 from typing import TypeAlias, cast
 
-DEFAULT_ID2COLOR: dict[int, tuple[int, ...]] = {
-    0: (0, 0, 0),
-    1: (22, 21, 22),
-    2: (204, 204, 204),
-    3: (46, 6, 243),
-    4: (154, 147, 185),
-    5: (198, 233, 255),
-    6: (255, 53, 94),
-    7: (250, 250, 55),
-    8: (255, 255, 255),
-    9: (115, 51, 128),
-    10: (36, 179, 83),
-    11: (119, 119, 119),
-}
-DEFAULT_COLOR2ID = {
-    color: id for (id, color) in DEFAULT_ID2COLOR.items()
+from teshub.extra_typing import Color
+
+DEFAULT_SEG_COLORS: list[Color] = [
+    (0, 0, 0),
+    (22, 21, 22),
+    (204, 204, 204),
+    (46, 6, 243),
+    (154, 147, 185),
+    (198, 233, 255),
+    (255, 53, 94),
+    (250, 250, 55),
+    (255, 255, 255),
+    (115, 51, 128),
+    (36, 179, 83),
+    (119, 119, 119),
+]
+DEFAULT_SEG_COLOR2ID = {
+    color: id for id, color in enumerate(DEFAULT_SEG_COLORS)
 }
 
-DEFAULT_ID2LABEL: dict[int, str] = {
-    0: "background",
-    1: "black_clouds",
-    2: "white_clouds",
-    3: "blue_sky",
-    4: "gray_sky",
-    5: "white_sky",
-    6: "fog",
-    7: "sun",
-    8: "snow",
-    9: "shadow",
-    10: "wet_ground",
-    11: "shadow_snow"
-}
-DEFAULT_LABEL2ID = {
-    label: id for (id, label) in DEFAULT_ID2LABEL.items()
+DEFAULT_SEG_LABELS: list[str] = [
+    "background",
+    "black_clouds",
+    "white_clouds",
+    "blue_sky",
+    "gray_sky",
+    "white_sky",
+    "fog",
+    "sun",
+    "snow",
+    "shadow",
+    "wet_ground",
+    "shadow_snow"
+]
+DEFAULT_SEG_LABEL2ID = {
+    label: id for id, label in enumerate(DEFAULT_SEG_LABELS)
 }
 
+DEFAULT_LABELS: list[str] = [
+    "snowy", "rainy", "foggy", "cloudy"
+]
+DEFAULT_LABELS_TO_ID = {
+    label: id for id, label in enumerate(DEFAULT_LABELS)
+}
 
 # Should this be moved to teshub.extra_typing?
 # Not sure if introducing the torch dependency there is worth it
