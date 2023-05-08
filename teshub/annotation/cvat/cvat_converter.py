@@ -49,6 +49,17 @@ class CVATConverter:
         labels: DefaultDict[str, dict[str, float]] = defaultdict(
             lambda: {label_name: 0.0 for label_name in project_labels.values()}
         )
+
+        # Find frames with segmentation masks available
+        # Tags are not used in CVAT if the value of the label is 0.0,
+        # so this allows labelling images with no tags
+        annotated_frames = [
+            job_media_data.frames[shape.frame].name
+            for shape in job_annotation_metadata.shapes
+        ]
+        for frame in annotated_frames:
+            _ = labels[frame]
+
         for tag in job_annotation_metadata.tags:
             frame_name = job_media_data.frames[tag.frame].name
 

@@ -179,9 +179,9 @@ class WebcamDataset:
             frame_csv.update_record(
                 seg_file_name.replace("_seg.png", ".jpg"),
                 {
-                    "status": WebcamFrameStatus.SYNTHETIC_ANNOTATION
+                    "status": WebcamFrameStatus.AUTOMATICALLY_ANNOTATED
                     if synthetic
-                    else WebcamFrameStatus.MANUAL_ANNOTATION,
+                    else WebcamFrameStatus.MANUALLY_ANNOTATED,
                     "segmentation_path": seg_file_name,
                 },
                 persist=False,
@@ -193,9 +193,9 @@ class WebcamDataset:
             frame_csv.update_record(
                 frame_file_name,
                 {
-                    "status": WebcamFrameStatus.SYNTHETIC_ANNOTATION
+                    "status": WebcamFrameStatus.AUTOMATICALLY_ANNOTATED
                     if synthetic
-                    else WebcamFrameStatus.MANUAL_ANNOTATION,
+                    else WebcamFrameStatus.MANUALLY_ANNOTATED,
                     "labels": str(frame_labels),
                 },
                 persist=False,
