@@ -126,12 +126,13 @@ class WeatherInFormer(pl.LightningModule):
             seg_mask = segformer_output[1]
 
         batch_size = seg_mask.size(0)
-        reg_output: tuple[torch.Tensor, ...] = (self._regression(
-            seg_mask.reshape(batch_size, -1)))
+        reg_output = self._regression(seg_mask.reshape(batch_size, -1))
 
-        if labels:
-            reg_loss = self._reg_loss_fn(reg_output[0], labels)
-            reg_output = reg_loss + reg_output
+        if labels is not None:
+            reg_loss = self._reg_loss_fn(reg_output, labels)
+            reg_output = (reg_loss, reg_output)
+        else:
+            reg_output = (reg_output)
 
         return segformer_output, reg_output
 
