@@ -77,7 +77,7 @@ class WeatherInFormer(pl.LightningModule):
         )
 
     def _construct_metric(self, phase: str, task: str) -> MetricCollection:
-        prefix = f"{phase}_{task}"
+        prefix = f"{phase}_{task}_"
 
         match task:
             case "seg":
@@ -107,10 +107,10 @@ class WeatherInFormer(pl.LightningModule):
 
     def _init_metrics(self) -> None:
         self.train_seg_metrics = self._construct_metric('train', 'seg')
-        self.train_reg_metrics = self._construct_metric('train', 'seg')
+        self.train_reg_metrics = self._construct_metric('train', 'reg')
 
-        self.val_reg_metrics = self._construct_metric('val', 'reg')
         self.val_seg_metrics = self._construct_metric('val', 'seg')
+        self.val_reg_metrics = self._construct_metric('val', 'reg')
 
     def forward(
         self,
@@ -174,9 +174,9 @@ class WeatherInFormer(pl.LightningModule):
         reg_loss: torch.Tensor,
         phase: str
     ) -> None:
-        self.log(f"{phase}_loss", total_loss, prog_bar=True)
-        self.log(f"{phase}_seg_loss", seg_loss, prog_bar=True)
-        self.log(f"{phase}_reg_loss", reg_loss, prog_bar=True)
+        self.log(f"{phase}_loss", total_loss)
+        self.log(f"{phase}_seg_loss", seg_loss)
+        self.log(f"{phase}_reg_loss", reg_loss)
 
     def training_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
@@ -185,10 +185,8 @@ class WeatherInFormer(pl.LightningModule):
         self._log_losses(*losses, phase='train')
 
         if batch_idx and batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.train_seg_metrics.compute(),
-                          on_epoch=True)
-            self.log_dict(self.train_reg_metrics.compute(),
-                          on_epoch=True)
+            self.log_dict(self.train_seg_metrics.compute())
+            self.log_dict(self.train_reg_metrics.compute())
 
         return losses[0]
 
@@ -199,10 +197,8 @@ class WeatherInFormer(pl.LightningModule):
         self._log_losses(*losses, phase='val')
 
         if batch_idx and batch_idx % self.metrics_interval == 0:
-            self.log_dict(self.val_seg_metrics.compute(),
-                          on_epoch=True)
-            self.log_dict(self.val_reg_metrics.compute(),
-                          on_epoch=True)
+            self.log_dict(self.val_seg_metrics.compute())
+            self.log_dict(self.val_reg_metrics.compute())
 
     def configure_optimizers(
         self
