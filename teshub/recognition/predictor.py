@@ -4,8 +4,9 @@ import torch
 from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.recognition.weather_informer import WeatherInFormer
 from teshub.recognition.utils import (
-    upsample_logits, load_model_hyperparams_from_checkpoint,
-    NestedTorchDict, DEFAULT_SEG_COLOR2ID
+    upsample_logits, load_model_hyperparams_from_checkpoint, NestedTorchDict,
+    DEFAULT_SEG_COLOR2ID, DEFAULT_LABELS, DEFAULT_SEG_LABELS,
+    DEFAULT_SEG_LABEL2ID
 )
 from typing import cast
 
@@ -21,7 +22,7 @@ class WeatherInFormerPredictor:
         else torch.device('cpu')
     )
 
-    pretrained_model_name: str = field(init=False)
+    pretrained_segformer_model: str = field(init=False)
     model_batch_size: int = field(init=False)
     model: WeatherInFormer = field(init=False)
 
@@ -33,13 +34,17 @@ class WeatherInFormerPredictor:
         assert hparams
 
         self.model_batch_size = cast(int, hparams['batch_size'])
-        self.pretrained_model_name = cast(
-            str, hparams['pretrained_model_name'])
+        self.pretrained_segformer_model = cast(
+            str, hparams['pretrained_segformer_model'])
 
         self.model = WeatherInFormer.load_from_checkpoint(  # type: ignore
             self.model_checkpoint_path,
+            label_names=DEFAULT_LABELS,
+            seg_label_names=DEFAULT_SEG_LABELS,
+            seg_label2id=DEFAULT_SEG_LABEL2ID,
             map_location=self.map_location,
-            pretrained_model=self.pretrained_model_name,
+            pretrained_model=self.pretrained_segformer_model,
+
         )
 
     def predict(

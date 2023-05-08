@@ -66,15 +66,14 @@ class Weather2InfoDataset(Dataset[dict[str, torch.Tensor]]):
             return_tensors="pt",
         )
 
-        # Reserve "labels" key for weather labels like "cloudy"
-        encoded_inputs["seg_labels"] = encoded_inputs["labels"]
-        del encoded_inputs["labels"]
-
-        # TODO: Find a better way of doing this and not break mypy
-        labels_1d: list[int] = []
-        color_tensor: torch.Tensor
-
         if segmentation:
+            # Reserve "labels" key for weather labels like "cloudy"
+            encoded_inputs["seg_labels"] = encoded_inputs["labels"]
+            del encoded_inputs["labels"]
+
+            # TODO: Find a better way of doing this and not break mypy
+            labels_1d: list[int] = []
+            color_tensor: torch.Tensor
             for color_tensor in encoded_inputs["seg_labels"].view(-1, 3):
                 color_list: list[int] = color_tensor.tolist()
                 color_tuple = cast(Color, tuple(color_list))
