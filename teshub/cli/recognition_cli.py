@@ -2,6 +2,7 @@ from PIL import Image
 import argparse
 import os
 from dataclasses import dataclass
+from typing import Callable, Any
 
 from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.recognition.weather2info import Weather2InfoDataset
@@ -51,7 +52,7 @@ train_parser.add_argument(
 train_parser.add_argument(
     "--pretrained_segformer_model",
     type=str,
-    default="nvidia/mit-b1"
+    default="nvidia/mit-b3"
 )
 train_parser.add_argument(
     "--metrics_interval",
@@ -121,28 +122,30 @@ predict_parser.add_argument(
 
 @dataclass(kw_only=True)
 class Arguments:
-    dataset_dir: str
-    batch_size: int
+    dataset_dir: str = '.'
+    batch_size: int = 2
 
-    pretrained_segformer_model: str
-    seg_lr: float
-    reg_lr: float
-    seg_loss_weight: float
-    reg_loss_weight: float
-    reg_loss_used: str
+    pretrained_segformer_model: str = 'nvidia/mit-b3'
+    seg_lr: float = 6 * 10e-05
+    reg_lr: float = 1 * 10e-05
+    seg_loss_weight: float = 0.5
+    reg_loss_weight: float = 0.5
+    reg_loss_used: str = 'mae'
 
-    train_val_split_ratio: float
+    train_val_split_ratio: float = 0.9
 
-    tb_logdir: str
-    early_stop: bool
+    tb_logdir: str = 'logdir'
+    early_stop: bool = True
 
-    metrics_interval: int
+    metrics_interval: int = 50
 
     csv_path: str | None = None
     resume_training_checkpoint_path: str | None = None
 
     image_path: str | None = None
     model_checkpoint_path: str | None = None
+
+    func: Callable[[Any], Any] = None  # type: ignore
 
 
 def csv_path_from_args(args: Arguments) -> str | None:
@@ -183,8 +186,9 @@ def predict(args: Arguments) -> None:
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
-    prediction = predictor.predict(args.image_path)
+    prediction, labels = predictor.predict(args.image_path)
     predicted_img = seg_mask_to_image(prediction[0], DEFAULT_SEG_COLORS)
+    print(labels)
 
     # TODO: Create elaborate visualization tools in
     # visualization module
@@ -199,11 +203,7 @@ def main() -> None:
     predict_parser.set_defaults(func=predict)
 
     args = parser.parse_args()
-
-    args_dict = dict(vars(args))
-    args_dict.pop('func')
-
-    args.func(Arguments(**args_dict))
+    args.func(Arguments(**dict(vars(args))))  # type: ignore
 
 
 if __name__ == "__main__":
