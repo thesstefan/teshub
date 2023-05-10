@@ -21,13 +21,18 @@ def predict() -> flask.Response:
     image_bytes: bytes = image_file.read()
     image = Image.open(io.BytesIO(image_bytes))
 
-    seg_mask, labels = weather_informer_predictor.predict_and_process(image)
+    seg_mask, labels, color_dict = (
+        weather_informer_predictor.predict_and_process(image)
+    )
 
     seg_bytes = io.BytesIO()
     seg_mask.save(seg_bytes, 'png', quality=100)
     seg_bytes.seek(0)
 
     response = flask.send_file(seg_bytes, mimetype='image/png')
+
     response.headers['labels'] = json.dumps(labels)
+    response.headers['color_map'] = json.dumps(color_dict)
 
     return response
+
