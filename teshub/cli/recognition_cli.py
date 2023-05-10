@@ -1,17 +1,17 @@
-from PIL import Image
 import argparse
 import os
 from dataclasses import dataclass
-from typing import Callable, Any
+from typing import Any, Callable
+
+import matplotlib.pyplot as plt
+from PIL import Image
 
 from teshub.dataset.webcam_dataset import WebcamDataset
-from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.recognition.predictor import WeatherInFormerPredictor
 from teshub.recognition.trainer import WeatherInFormerTrainer
 from teshub.recognition.utils import DEFAULT_SEG_COLORS
+from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.visualization.transforms import seg_mask_to_image
-
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
     prog="teshub_recognition",
@@ -186,7 +186,10 @@ def predict(args: Arguments) -> None:
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
-    segmentation, labels, _ = predictor.predict_and_process(args.image_path)
+    segmentation, labels, _ = (
+        next(predictor.predict_and_process([args.image_path]))
+    )
+    print(labels)
 
     # TODO: Create elaborate visualization tools in
     # visualization module

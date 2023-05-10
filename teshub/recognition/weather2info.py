@@ -3,22 +3,17 @@ from dataclasses import dataclass, field
 import torch
 from PIL.Image import Image
 from torch.utils.data import Dataset
+from transformers import SegformerImageProcessor  # type: ignore[import]
 
 from teshub.dataset.webcam_dataset import WebcamDataset
+from teshub.extra_typing import Color
+from teshub.recognition.utils import (DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE,
+                                      DEFAULT_LABELS, DEFAULT_SEG_COLOR2ID,
+                                      DEFAULT_SEG_COLORS, DEFAULT_SEG_LABEL2ID,
+                                      DEFAULT_SEG_LABELS)
+from teshub.visualization.transforms import rgb_pixels_to_1d
 from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 from teshub.webcam.webcam_stream import WebcamStatus
-from teshub.extra_typing import Color
-from teshub.visualization.transforms import rgb_pixels_to_1d
-
-from teshub.recognition.utils import (
-    DEFAULT_LABELS,
-    DEFAULT_SEG_LABELS,
-    DEFAULT_SEG_LABEL2ID,
-    DEFAULT_SEG_COLORS,
-    DEFAULT_SEG_COLOR2ID
-)
-
-from transformers import SegformerImageProcessor  # type: ignore[import]
 
 
 @dataclass
@@ -63,6 +58,7 @@ class Weather2InfoDataset(Dataset[dict[str, torch.Tensor]]):
         encoded_inputs: dict[str, torch.Tensor] = SegformerImageProcessor()(
             image,
             segmentation,
+            size=DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE,
             return_tensors="pt",
         )
 
