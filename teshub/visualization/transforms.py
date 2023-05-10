@@ -1,6 +1,7 @@
 import torch
 from PIL import Image
 from teshub.extra_typing import Color
+from typing import cast
 
 # No stubs for transforms yet:
 #   https://github.com/pytorch/vision/issues/2025
@@ -31,3 +32,20 @@ def seg_mask_to_image(
 
     return image, colors_used
 
+
+def rgb_pixels_to_1d(
+    pixel_values: torch.Tensor,
+    rgb_pixel_to_value: dict[Color, int]
+) -> torch.Tensor:
+    values_1d: list[int] = []
+    color_tensor: torch.Tensor
+
+    for color_tensor in pixel_values.view(-1, 3):
+        color_list: list[int] = color_tensor.tolist()
+        color_tuple = cast(Color, tuple(color_list))
+
+        values_1d.append(rgb_pixel_to_value[color_tuple])
+
+    return torch.tensor(values_1d).view(
+        *pixel_values.shape[-2:], 1
+    )
