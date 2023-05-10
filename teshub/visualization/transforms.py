@@ -10,8 +10,9 @@ from torchvision.transforms.functional import (  # type: ignore
 
 
 def seg_mask_to_image(
-    seg_mask: torch.Tensor, colors: list[Color]
-) -> Image.Image:
+    seg_mask: torch.Tensor,
+    colors: list[Color],
+) -> tuple[Image.Image, list[Color]]:
     assert (len(seg_mask.shape) == 2)
 
     seg_mask_3d: torch.Tensor = (
@@ -23,4 +24,10 @@ def seg_mask_to_image(
 
     image: Image.Image = to_pil_image(seg_mask_3d.permute(2, 0, 1))
 
-    return image
+    # TODO: This seems unsually slow. Investigate more and decide if it's needed.
+    unique_color_tensors: torch.Tensor = torch.unique(
+        seg_mask_3d.reshape(-1, 3), dim=0)
+    colors_used: list[Color] = unique_color_tensors.tolist()
+
+    return image, colors_used
+
