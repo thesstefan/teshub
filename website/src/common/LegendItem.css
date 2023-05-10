@@ -1,0 +1,18 @@
+.legend-item {
+    display: flex;
+    flex-direction: row;
+    column-gap: 10px;
+    align-items: center;
+}
+
+.legend-item-color {
+    width: 10px;
+    height: 10px;
+    background: --var(color);
+    border: 3px solid black;
+}
+
+.legend-item-name {
+    padding-bottom: 2px;
+    white-space: nowrap;
+}
