@@ -153,3 +153,29 @@ input[type="file"] {
   }
 }
 
+.prediction-results {
+    display: flex;
+    flex-direction: row;
+    column-gap: 20px;
+    justify-content: space-between;
+}
+
+.weather-label-container {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.weather-label {
+    display: flex;
+    justify-content: space-between;
+
+    border: 5px solid blue;
+    background-color: #000;
+    color: #F4F3F2;
+}
+
+.weather-cue-legend {
+    justify-content: center;
+    flex-direction: column;
+}
