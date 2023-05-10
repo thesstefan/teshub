@@ -10,6 +10,7 @@ from teshub.recognition.utils import (
 )
 from typing import cast
 from teshub.visualization.transforms import seg_mask_to_image
+from teshub.extra_typing import Color
 
 from PIL import Image
 
@@ -77,15 +78,27 @@ class WeatherInFormerPredictor:
 
     def predict_and_process(
         self,
-        image: str | Image.Image
-    ) -> tuple[Image.Image, dict[str, float]]:
+        image: str | Image.Image,
+    ) -> tuple[Image.Image, dict[str, float], dict[str, Color]]:
         seg_prediction: torch.Tensor
         labels_prediction: torch.Tensor
 
         seg_prediction, labels_prediction = self.predict(image)
+        seg_image, used_colors = seg_mask_to_image(
+            seg_prediction[0], DEFAULT_SEG_COLORS)
 
-        return (
-            seg_mask_to_image(seg_prediction[0], DEFAULT_SEG_COLORS),
-            dict(zip(DEFAULT_LABELS, cast(
-                list[float], labels_prediction[0].tolist())))
+        color_map = {
+            DEFAULT_SEG_LABELS[
+                DEFAULT_SEG_COLOR2ID[
+                    cast(tuple[int, int, int], tuple(color))
+                ]
+            ]:
+                color for color in used_colors
+        }
+        label_dict = dict(
+            zip(DEFAULT_LABELS,
+                cast(list[float], labels_prediction[0].tolist()))
         )
+
+        return seg_image, label_dict, color_map
+
