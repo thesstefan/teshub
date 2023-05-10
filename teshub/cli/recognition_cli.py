@@ -186,7 +186,7 @@ def predict(args: Arguments) -> None:
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
-    segmentation, labels = predictor.predict_and_process(args.image_path)
+    segmentation, labels, _ = predictor.predict_and_process(args.image_path)
 
     # TODO: Create elaborate visualization tools in
     # visualization module
