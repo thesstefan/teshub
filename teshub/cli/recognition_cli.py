@@ -104,6 +104,12 @@ train_parser.add_argument(
     type=bool,
     default=True
 )
+train_parser.add_argument(
+    "--dataset_random_split",
+    action=argparse.BooleanOptionalAction,
+    type=bool,
+    default=False
+)
 
 predict_parser = subparsers.add_parser("predict")
 predict_parser.add_argument(
@@ -133,6 +139,7 @@ class Arguments:
     reg_loss_used: str = 'mae'
 
     train_val_split_ratio: float = 0.9
+    dataset_random_split: bool = False
 
     tb_logdir: str = 'logdir'
     early_stop: bool = True
@@ -169,8 +176,11 @@ def train(args: Arguments) -> None:
         reg_loss_used=args.reg_loss_used,
 
         batch_size=args.batch_size,
-        metrics_interval=args.metrics_interval,
+
         train_val_split_ratio=args.train_val_split_ratio,
+        dataset_random_split=args.dataset_random_split,
+
+        metrics_interval=args.metrics_interval,
         tb_log_dir=args.tb_logdir,
         resume_checkpoint=args.resume_training_checkpoint_path
     )
