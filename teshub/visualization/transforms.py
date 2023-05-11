@@ -47,5 +47,5 @@ def rgb_pixels_to_1d(
         values_1d.append(rgb_pixel_to_value[color_tuple])
 
     return torch.tensor(values_1d).view(
-        *pixel_values.shape[-2:], 1
+        *pixel_values.shape[:-1], 1
     )
