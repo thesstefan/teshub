@@ -63,6 +63,12 @@ class Weather2InfoDataset(Dataset[dict[str, torch.Tensor]]):
         )
 
         if segmentation:
+            # Use shape (num_batches, num_channels, height, width)
+            # for segmentation mask
+            encoded_inputs["labels"] = (
+                encoded_inputs["labels"].permute((0, 3, 1, 2))
+            )
+
             encoded_inputs["seg_labels"] = rgb_pixels_to_1d(
                 encoded_inputs["labels"],
                 seg_color2id
