@@ -1,13 +1,12 @@
-import torch
-from PIL import Image
-from teshub.extra_typing import Color
 from typing import cast
 
+import torch
+from PIL import Image
 # No stubs for transforms yet:
 #   https://github.com/pytorch/vision/issues/2025
-from torchvision.transforms.functional import (  # type: ignore
-    to_pil_image
-)
+from torchvision.transforms.functional import to_pil_image  # type: ignore
+
+from teshub.extra_typing import Color
 
 
 def seg_mask_to_image(
@@ -40,12 +39,22 @@ def rgb_pixels_to_1d(
     values_1d: list[int] = []
     color_tensor: torch.Tensor
 
-    for color_tensor in pixel_values.view(-1, 3):
+    # Expected shapes: (batch_size, num_channels=3, height, width)
+    # or (num_channels=3, height, width)
+    assert pixel_values.shape[-3] == 3 and len(pixel_values.shape) in [3, 4]
+
+    # Move color channel to last dimension
+    for color_tensor in pixel_values.transpose(-3, -1).reshape(-1, 3):
         color_list: list[int] = color_tensor.tolist()
         color_tuple = cast(Color, tuple(color_list))
 
         values_1d.append(rgb_pixel_to_value[color_tuple])
 
-    return torch.tensor(values_1d).view(
-        *pixel_values.shape[:-1], 1
-    )
+    shape_1d: tuple[int, ...] = (
+        pixel_values.shape[0], 1, *pixel_values.shape[-2:])
+
+    # If batch size is not used, remove placeholder from shape
+    if len(pixel_values.shape) == 3:
+        shape_1d = shape_1d[1:]
+
+    return torch.tensor(values_1d).view(shape_1d)
