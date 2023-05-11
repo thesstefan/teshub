@@ -4,11 +4,11 @@ from typing import Callable, cast
 
 import torch
 from torch.utils.data import Dataset
-from torchvision.transforms.functional import \
-    pil_to_tensor  # type: ignore[import]
+from torchvision.transforms.functional import pil_to_tensor  # type: ignore[import]
 
 from teshub.dataset.webcam_dataset import WebcamDataset
 from teshub.extra_typing import Color
+
 # TODO: Move this in a common directory
 from teshub.recognition.utils import DEFAULT_SEG_COLOR2ID
 from teshub.visualization.transforms import rgb_pixels_to_1d
@@ -54,20 +54,20 @@ class Weather2WeatherDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         target_pixels: torch.Tensor = pil_to_tensor(target_frame.image)
 
         source_seg_pixels: torch.Tensor = pil_to_tensor(
-            source_frame.segmentation)
+            source_frame.segmentation
+        )
         target_seg_pixels: torch.Tensor = pil_to_tensor(
-            target_frame.segmentation)
+            target_frame.segmentation
+        )
 
         source_seg = rgb_pixels_to_1d(
-            source_seg_pixels,
-            rgb_pixel_to_value=DEFAULT_SEG_COLOR2ID
+            source_seg_pixels, rgb_pixel_to_value=DEFAULT_SEG_COLOR2ID
         )
         target_seg = rgb_pixels_to_1d(
-            target_seg_pixels,
-            rgb_pixel_to_value=DEFAULT_SEG_COLOR2ID
+            target_seg_pixels, rgb_pixel_to_value=DEFAULT_SEG_COLOR2ID
         )
 
         source = torch.cat([source_pixels, source_seg], dim=0)
         target = torch.cat([target_pixels, target_seg], dim=0)
 
-        return source, target
+        return dict(source=source, target=target)
