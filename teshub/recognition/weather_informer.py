@@ -168,6 +168,9 @@ class WeatherInFormer(pl.LightningModule):
             case 'val':
                 self.val_seg_metrics.update(predicted_masks, masks)
                 self.val_reg_metrics.update(predicted_labels, labels)
+            case 'test':
+                self.test_seg_metrics.update(predicted_masks, masks)
+                self.test_reg_metrics.update(predicted_labels, labels)
 
         return (
             seg_loss * self.seg_loss_weight + reg_loss * self.reg_loss_weight,
