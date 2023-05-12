@@ -41,12 +41,20 @@ def rgb_pixels_to_1d(
     values_1d: list[int] = []
     color_tensor: torch.Tensor
 
-    # Expected shapes: (batch_size, num_channels=3, height, width)
+    # Expected shape: (batch_size, num_channels=3, height, width)
     # or (num_channels=3, height, width)
     assert pixel_values.shape[-3] == 3 and len(pixel_values.shape) in [3, 4]
 
     # Move color channel to last dimension
-    for color_tensor in pixel_values.transpose(-3, -1).reshape(-1, 3):
+    # TODO: This can probably be handled better
+    reshaped_pixel_values: torch.Tensor
+    match len(pixel_values.shape):
+        case 3:
+            reshaped_pixel_values = pixel_values.permute(1, 2, 0).reshape(-1, 3)
+        case 4:
+            reshaped_pixel_values = pixel_values.permute(0, 2, 3, 1).reshape(-1, 3)
+
+    for color_tensor in reshaped_pixel_values:
         color_list: list[int] = color_tensor.tolist()
         color_tuple = cast(Color, tuple(color_list))
 
