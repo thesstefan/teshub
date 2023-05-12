@@ -142,3 +142,6 @@ class WeatherInFormerTrainer:
         trainer.fit(
             model, ckpt_path=self.resume_checkpoint
         )
+
+        # TODO: Change for test_dataloader
+        trainer.test(model, val_dataloader)
