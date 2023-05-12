@@ -34,6 +34,7 @@ class WeatherInFormer(pl.LightningModule):
 
     train_loader: DataLoader[dict[str, torch.Tensor]] | None = None
     val_loader: DataLoader[dict[str, torch.Tensor]] | None = None
+    test_loader: DataLoader[dict[str, torch.Tensor]] | None = None
     batch_size: int | None = field(init=False, default=None)
 
     metrics_interval: int = 100
@@ -43,6 +44,9 @@ class WeatherInFormer(pl.LightningModule):
 
     val_seg_metrics: MetricCollection = field(init=False)
     val_reg_metrics: MetricCollection = field(init=False)
+
+    test_seg_metrics: MetricCollection = field(init=False)
+    test_reg_metrics: MetricCollection = field(init=False)
 
     _segformer: nn.Module = field(init=False)
     _regression: nn.Module = field(init=False)
@@ -111,6 +115,9 @@ class WeatherInFormer(pl.LightningModule):
 
         self.val_seg_metrics = self._construct_metric('val', 'seg')
         self.val_reg_metrics = self._construct_metric('val', 'reg')
+
+        self.test_seg_metrics = self._construct_metric('test', 'seg')
+        self.test_reg_metrics = self._construct_metric('test', 'reg')
 
     def forward(
         self,
@@ -200,6 +207,15 @@ class WeatherInFormer(pl.LightningModule):
             self.log_dict(self.val_seg_metrics.compute())
             self.log_dict(self.val_reg_metrics.compute())
 
+    def test_step(
+        self, batch: dict[str, torch.Tensor], batch_idx: int
+    ) -> None:
+        losses = self._compute_losses_and_update_metrics(batch, phase='test')
+        self._log_losses(*losses, phase='test')
+
+        self.log_dict(self.test_seg_metrics.compute())
+        self.log_dict(self.test_reg_metrics.compute())
+
     def configure_optimizers(
         self
     ) -> tuple[
@@ -224,3 +240,6 @@ class WeatherInFormer(pl.LightningModule):
 
     def val_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
         return self.val_loader
+
+    def test_dataloader(self) -> DataLoader[dict[str, torch.Tensor]] | None:
+        return self.test_loader
