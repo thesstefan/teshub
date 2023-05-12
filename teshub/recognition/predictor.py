@@ -78,6 +78,8 @@ class WeatherInFormerPredictor:
                 )["pixel_values"]
             )
 
+        pixel_values_batch = pixel_values_batch.to(self.map_location)
+
         outputs: tuple[tuple[torch.Tensor, ...], tuple[torch.Tensor, ...]] = (
             self.model(pixel_values_batch)
         )
