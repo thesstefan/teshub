@@ -2,6 +2,7 @@ from typing import cast
 
 import torch
 from PIL import Image
+
 # No stubs for transforms yet:
 #   https://github.com/pytorch/vision/issues/2025
 from torchvision.transforms.functional import to_pil_image  # type: ignore
@@ -20,7 +21,8 @@ def seg_mask_to_image(
     )
 
     for id, color in enumerate(colors):
-        seg_mask_3d[seg_mask == id] = torch.tensor(color, dtype=torch.uint8)
+        seg_mask_3d[seg_mask == id] = torch.tensor(
+            color, dtype=torch.uint8, device=seg_mask_3d.device))
 
     image: Image.Image = to_pil_image(seg_mask_3d.permute(2, 0, 1))
 
