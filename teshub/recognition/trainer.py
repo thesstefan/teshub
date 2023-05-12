@@ -144,4 +144,4 @@ class WeatherInFormerTrainer:
         )
 
         # TODO: Change for test_dataloader
-        trainer.test(model, val_dataloader)
+        trainer.test(model, val_dataloader, ckpt_path="best")
