@@ -1,18 +1,19 @@
-from dataclasses import field, dataclass
-import torch
+from dataclasses import dataclass, field
+from typing import Generator, cast
 
+import torch
+from PIL import Image
+
+from teshub.extra_typing import Color
+from teshub.recognition.utils import (DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE,
+                                      DEFAULT_LABELS, DEFAULT_SEG_COLOR2ID,
+                                      DEFAULT_SEG_COLORS, DEFAULT_SEG_LABEL2ID,
+                                      DEFAULT_SEG_LABELS, NestedTorchDict,
+                                      load_model_hyperparams_from_checkpoint,
+                                      upsample_logits)
 from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.recognition.weather_informer import WeatherInFormer
-from teshub.recognition.utils import (
-    upsample_logits, load_model_hyperparams_from_checkpoint, NestedTorchDict,
-    DEFAULT_SEG_COLOR2ID, DEFAULT_LABELS, DEFAULT_SEG_LABELS,
-    DEFAULT_SEG_LABEL2ID, DEFAULT_SEG_COLORS
-)
-from typing import cast
 from teshub.visualization.transforms import seg_mask_to_image
-from teshub.extra_typing import Color
-
-from PIL import Image
 
 
 @dataclass
@@ -49,43 +50,85 @@ class WeatherInFormerPredictor:
 
         )
 
-    def predict(
+    def _predict_batch(
         self,
-        image: str | Image.Image
+        image_batch: list[str | Image.Image],
+        image_size: tuple[int, int]
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        if isinstance(image, str):
-            image = Image.open(image)
+        assert len(image_batch) <= self.model_batch_size
 
-        pixel_values = (
-            Weather2InfoDataset.feature_extractor(
-                seg_color2id=DEFAULT_SEG_COLOR2ID, image=image)["pixel_values"]
+        # TODO: Not sure if we should use (height, width)
+        # or (width, height) here.
+        pixel_values_shape = (3, * DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE.values())
+        pixel_values_batch = torch.empty(
+            (self.model_batch_size, *pixel_values_shape)
         )
 
-        pixel_values_batch = pixel_values.repeat(
-            self.model_batch_size, 1, 1, 1
-        ).to(self.map_location)
+        for idx, image in enumerate(image_batch):
+            if isinstance(image, str):
+                image = Image.open(image)
 
-        outputs: tuple[tuple[torch.Tensor], tuple[torch.Tensor]] = (
+                if image.size != image_size:
+                    raise RuntimeError(
+                        "All images in batch must have the same size")
+
+            pixel_values_batch[idx] = (
+                Weather2InfoDataset.feature_extractor(
+                    seg_color2id=DEFAULT_SEG_COLOR2ID, image=image
+                )["pixel_values"]
+            )
+
+        pixel_values_batch = pixel_values_batch.to(self.map_location)
+
+        outputs: tuple[tuple[torch.Tensor, ...], tuple[torch.Tensor, ...]] = (
             self.model(pixel_values_batch)
         )
-        seg_mask_output = outputs[0][0]
-        predicted_labels = outputs[1][0]
+        seg_mask_output, predicted_labels = outputs
 
-        predicted_seg = upsample_logits(
-            seg_mask_output, size=torch.Size([image.size[1], image.size[0]]))
+        predicted_seg_mask = upsample_logits(
+            seg_mask_output[0], size=torch.Size(image_size[::-1])
+        )
 
-        return predicted_seg.cpu(), predicted_labels.cpu()
+        return predicted_seg_mask, predicted_labels[0]
 
-    def predict_and_process(
+    def predict(
         self,
-        image: str | Image.Image,
-    ) -> tuple[Image.Image, dict[str, float], dict[str, Color]]:
-        seg_prediction: torch.Tensor
-        labels_prediction: torch.Tensor
+        image_list: list[str | Image.Image]
+    ) -> Generator[tuple[torch.Tensor, torch.Tensor], None, None]:
+        image_size = (
+            image_list[0].size
+            if isinstance(image_list[0], Image.Image)
+            else Image.open(image_list[0]).size
+        )
 
-        seg_prediction, labels_prediction = self.predict(image)
-        seg_image, used_colors = seg_mask_to_image(
-            seg_prediction[0], DEFAULT_SEG_COLORS)
+        for idx in range(0, len(image_list), self.model_batch_size):
+            image_batch = image_list[idx:idx + self.model_batch_size]
+
+            seg_mask, labels = self._predict_batch(image_batch, image_size)
+            filler_image_count = self.model_batch_size - len(image_batch)
+
+            if filler_image_count:
+                seg_mask = seg_mask[:-filler_image_count]
+                labels = labels[:-filler_image_count]
+
+            batch_predictions: list[tuple[torch.Tensor, torch.Tensor]] = [
+                (torch.squeeze(_seg_mask), torch.squeeze(_labels))
+                for _seg_mask, _labels in zip(
+                    torch.chunk(seg_mask, len(image_batch), dim=0),
+                    torch.chunk(labels, len(image_batch), dim=0)
+                )
+            ]
+
+            for prediction in batch_predictions:
+                yield prediction
+
+    def _process_output(
+        self, outputs: tuple[torch.Tensor, torch.Tensor]
+    ) -> tuple[Image.Image, dict[str, float], dict[str, Color]]:
+        seg_mask_prediction, labels_prediction = outputs
+
+        seg_mask_image, used_colors = seg_mask_to_image(
+            seg_mask_prediction, DEFAULT_SEG_COLORS)
 
         color_map = {
             DEFAULT_SEG_LABELS[
@@ -97,8 +140,17 @@ class WeatherInFormerPredictor:
         }
         label_dict = dict(
             zip(DEFAULT_LABELS,
-                cast(list[float], labels_prediction[0].tolist()))
+                cast(list[float], labels_prediction.tolist()))
         )
 
-        return seg_image, label_dict, color_map
+        return seg_mask_image, label_dict, color_map
 
+    def predict_and_process(
+        self,
+        image_list: list[str | Image.Image],
+    ) -> Generator[
+        tuple[Image.Image, dict[str, float], dict[str, Color]],
+        None, None
+    ]:
+        for outputs in self.predict(image_list):
+            yield self._process_output(outputs)
