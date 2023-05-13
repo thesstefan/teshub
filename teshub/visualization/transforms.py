@@ -22,7 +22,7 @@ def seg_mask_to_image(
 
     for id, color in enumerate(colors):
         seg_mask_3d[seg_mask == id] = torch.tensor(
-            color, dtype=torch.uint8, device=seg_mask_3d.device))
+            color, dtype=torch.uint8, device=seg_mask_3d.device)
 
     image: Image.Image = to_pil_image(seg_mask_3d.permute(2, 0, 1))
 
