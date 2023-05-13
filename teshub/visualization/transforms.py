@@ -1,12 +1,13 @@
+from typing import cast
+
 import torch
 from PIL import Image
-from teshub.extra_typing import Color
 
 # No stubs for transforms yet:
 #   https://github.com/pytorch/vision/issues/2025
-from torchvision.transforms.functional import (  # type: ignore
-    to_pil_image
-)
+from torchvision.transforms.functional import to_pil_image  # type: ignore
+
+from teshub.extra_typing import Color
 
 
 def seg_mask_to_image(
@@ -20,7 +21,8 @@ def seg_mask_to_image(
     )
 
     for id, color in enumerate(colors):
-        seg_mask_3d[seg_mask == id] = torch.tensor(color, dtype=torch.uint8)
+        seg_mask_3d[seg_mask == id] = torch.tensor(
+            color, dtype=torch.uint8, device=seg_mask_3d.device)
 
     image: Image.Image = to_pil_image(seg_mask_3d.permute(2, 0, 1))
 
@@ -31,3 +33,38 @@ def seg_mask_to_image(
 
     return image, colors_used
 
+
+def rgb_pixels_to_1d(
+    pixel_values: torch.Tensor,
+    rgb_pixel_to_value: dict[Color, int]
+) -> torch.Tensor:
+    values_1d: list[int] = []
+    color_tensor: torch.Tensor
+
+    # Expected shape: (batch_size, num_channels=3, height, width)
+    # or (num_channels=3, height, width)
+    assert pixel_values.shape[-3] == 3 and len(pixel_values.shape) in [3, 4]
+
+    # Move color channel to last dimension
+    # TODO: This can probably be handled better
+    reshaped_pixel_values: torch.Tensor
+    match len(pixel_values.shape):
+        case 3:
+            reshaped_pixel_values = pixel_values.permute(1, 2, 0).reshape(-1, 3)
+        case 4:
+            reshaped_pixel_values = pixel_values.permute(0, 2, 3, 1).reshape(-1, 3)
+
+    for color_tensor in reshaped_pixel_values:
+        color_list: list[int] = color_tensor.tolist()
+        color_tuple = cast(Color, tuple(color_list))
+
+        values_1d.append(rgb_pixel_to_value[color_tuple])
+
+    shape_1d: tuple[int, ...] = (
+        pixel_values.shape[0], 1, *pixel_values.shape[-2:])
+
+    # If batch size is not used, remove placeholder from shape
+    if len(pixel_values.shape) == 3:
+        shape_1d = shape_1d[1:]
+
+    return torch.tensor(values_1d).view(shape_1d)

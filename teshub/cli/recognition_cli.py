@@ -1,17 +1,17 @@
-from PIL import Image
 import argparse
 import os
 from dataclasses import dataclass
-from typing import Callable, Any
+from typing import Any, Callable
+
+import matplotlib.pyplot as plt
+from PIL import Image
 
 from teshub.dataset.webcam_dataset import WebcamDataset
-from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.recognition.predictor import WeatherInFormerPredictor
 from teshub.recognition.trainer import WeatherInFormerTrainer
 from teshub.recognition.utils import DEFAULT_SEG_COLORS
+from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.visualization.transforms import seg_mask_to_image
-
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
     prog="teshub_recognition",
@@ -104,6 +104,12 @@ train_parser.add_argument(
     type=bool,
     default=True
 )
+train_parser.add_argument(
+    "--dataset_random_split",
+    action=argparse.BooleanOptionalAction,
+    type=bool,
+    default=False
+)
 
 predict_parser = subparsers.add_parser("predict")
 predict_parser.add_argument(
@@ -133,6 +139,7 @@ class Arguments:
     reg_loss_used: str = 'mae'
 
     train_val_split_ratio: float = 0.9
+    dataset_random_split: bool = False
 
     tb_logdir: str = 'logdir'
     early_stop: bool = True
@@ -169,8 +176,11 @@ def train(args: Arguments) -> None:
         reg_loss_used=args.reg_loss_used,
 
         batch_size=args.batch_size,
-        metrics_interval=args.metrics_interval,
+
         train_val_split_ratio=args.train_val_split_ratio,
+        dataset_random_split=args.dataset_random_split,
+
+        metrics_interval=args.metrics_interval,
         tb_log_dir=args.tb_logdir,
         resume_checkpoint=args.resume_training_checkpoint_path
     )
@@ -186,7 +196,10 @@ def predict(args: Arguments) -> None:
         model_checkpoint_path=args.model_checkpoint_path,
     )
 
-    segmentation, labels, _ = predictor.predict_and_process(args.image_path)
+    segmentation, labels, _ = (
+        next(predictor.predict_and_process([args.image_path]))
+    )
+    print(labels)
 
     # TODO: Create elaborate visualization tools in
     # visualization module
