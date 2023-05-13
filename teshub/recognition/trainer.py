@@ -1,18 +1,18 @@
 # mypy: disable-error-code="misc"
 
-from torch.utils.data import DataLoader, random_split
 from dataclasses import dataclass
-from torch import nn
 from typing import Type
+
+import lightning.pytorch as pl  # type: ignore[import]
+import torch
+from lightning.pytorch.callbacks import Callback  # type: ignore[import]
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger  # type: ignore[import]
+from torch import nn
+from torch.utils.data import DataLoader, Subset, random_split
 
 from teshub.recognition.weather2info import Weather2InfoDataset
 from teshub.recognition.weather_informer import WeatherInFormer
-
-from lightning.pytorch.callbacks import (  # type: ignore[import]
-    Callback, EarlyStopping, ModelCheckpoint
-)
-from lightning.pytorch.loggers import TensorBoardLogger  # type: ignore[import]
-import lightning.pytorch as pl  # type: ignore[import]
 
 
 @dataclass
@@ -30,6 +30,7 @@ class WeatherInFormerTrainer:
     batch_size: int
     metrics_interval: int
 
+    dataset_random_split: bool
     train_val_split_ratio: float
     tb_log_dir: str
     resume_checkpoint: str | None = None
@@ -54,13 +55,30 @@ class WeatherInFormerTrainer:
 
         return LOSS_DICT[name]
 
-    def fit(self) -> None:
+    def _setup_train_val(self) -> tuple[
+        Subset[dict[str, torch.Tensor]],
+        Subset[dict[str, torch.Tensor]]
+    ]:
         train_size = int(len(self.weather2info) * self.train_val_split_ratio)
         val_size = len(self.weather2info) - train_size
 
-        train_dataset, val_dataset = random_split(
-            self.weather2info, [train_size, val_size]
+        if self.dataset_random_split:
+            train_subset, val_subset = (
+                random_split(self.weather2info, [train_size, val_size])
+            )
+
+            return train_subset, val_subset
+
+        return (
+            Subset(self.weather2info,
+                   list(range(val_size, val_size + train_size))),
+            Subset(self.weather2info,
+                   list(range(val_size)) +
+                   list(range(val_size + train_size, len(self.weather2info))))
         )
+
+    def fit(self) -> None:
+        train_dataset, val_dataset = self._setup_train_val()
 
         train_dataloader = DataLoader(
             train_dataset,
@@ -124,3 +142,6 @@ class WeatherInFormerTrainer:
         trainer.fit(
             model, ckpt_path=self.resume_checkpoint
         )
+
+        # TODO: Change for test_dataloader
+        trainer.test(model, val_dataloader, ckpt_path="best")

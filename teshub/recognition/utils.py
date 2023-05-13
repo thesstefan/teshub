@@ -1,17 +1,18 @@
+from typing import TypeAlias, cast
+
 import torch
 from torch import nn
-from typing import TypeAlias, cast
 
 from teshub.extra_typing import Color
 
 DEFAULT_SEG_COLORS: list[Color] = [
     (0, 0, 0),
-    (22, 21, 22),
+    (60, 60, 60),
     (204, 204, 204),
-    (46, 6, 243),
+    (52, 79, 226),
     (154, 147, 185),
     (198, 233, 255),
-    (255, 53, 94),
+    (170, 240, 209),
     (250, 250, 55),
     (255, 255, 255),
     (115, 51, 128),
@@ -45,6 +46,11 @@ DEFAULT_LABELS: list[str] = [
 ]
 DEFAULT_LABELS_TO_ID = {
     label: id for id, label in enumerate(DEFAULT_LABELS)
+}
+
+DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE: dict[str, int] = {
+    "height": 512,
+    "width": 512
 }
 
 # Should this be moved to teshub.extra_typing?
