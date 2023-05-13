@@ -3,22 +3,17 @@ from dataclasses import dataclass, field
 import torch
 from PIL.Image import Image
 from torch.utils.data import Dataset
-from typing import cast
+from transformers import SegformerImageProcessor  # type: ignore[import]
 
 from teshub.dataset.webcam_dataset import WebcamDataset
+from teshub.extra_typing import Color
+from teshub.recognition.utils import (DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE,
+                                      DEFAULT_LABELS, DEFAULT_SEG_COLOR2ID,
+                                      DEFAULT_SEG_COLORS, DEFAULT_SEG_LABEL2ID,
+                                      DEFAULT_SEG_LABELS)
+from teshub.visualization.transforms import rgb_pixels_to_1d
 from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 from teshub.webcam.webcam_stream import WebcamStatus
-from teshub.extra_typing import Color
-
-from teshub.recognition.utils import (
-    DEFAULT_LABELS,
-    DEFAULT_SEG_LABELS,
-    DEFAULT_SEG_LABEL2ID,
-    DEFAULT_SEG_COLORS,
-    DEFAULT_SEG_COLOR2ID
-)
-
-from transformers import SegformerImageProcessor  # type: ignore[import]
 
 
 @dataclass
@@ -63,28 +58,23 @@ class Weather2InfoDataset(Dataset[dict[str, torch.Tensor]]):
         encoded_inputs: dict[str, torch.Tensor] = SegformerImageProcessor()(
             image,
             segmentation,
+            size=DEFAULT_FEATURE_EXTRACTOR_IMG_SIZE,
             return_tensors="pt",
         )
 
         if segmentation:
-            # Reserve "labels" key for weather labels like "cloudy"
-            encoded_inputs["seg_labels"] = encoded_inputs["labels"]
-            del encoded_inputs["labels"]
-
-            # TODO: Find a better way of doing this and not break mypy
-            labels_1d: list[int] = []
-            color_tensor: torch.Tensor
-            for color_tensor in encoded_inputs["seg_labels"].view(-1, 3):
-                color_list: list[int] = color_tensor.tolist()
-                color_tuple = cast(Color, tuple(color_list))
-
-                labels_1d.append(seg_color2id[color_tuple])
-
-            encoded_inputs["seg_labels"] = (
-                torch.tensor(labels_1d).view(
-                    *encoded_inputs["pixel_values"].shape[-2:], 1
-                )
+            # Use shape (num_batches, num_channels, height, width)
+            # for segmentation mask
+            encoded_inputs["labels"] = (
+                encoded_inputs["labels"].permute((0, 3, 1, 2))
             )
+
+            encoded_inputs["seg_labels"] = rgb_pixels_to_1d(
+                encoded_inputs["labels"],
+                seg_color2id
+            )
+            # Reserve "labels" key for weather labels like "cloudy"
+            del encoded_inputs["labels"]
 
         for categories, values in encoded_inputs.items():
             values.squeeze_()
