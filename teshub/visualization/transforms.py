@@ -2,7 +2,6 @@ from typing import cast
 
 import torch
 from PIL import Image
-
 # No stubs for transforms yet:
 #   https://github.com/pytorch/vision/issues/2025
 from torchvision.transforms.functional import to_pil_image  # type: ignore
@@ -26,7 +25,8 @@ def seg_mask_to_image(
 
     image: Image.Image = to_pil_image(seg_mask_3d.permute(2, 0, 1))
 
-    # TODO: This seems unsually slow. Investigate more and decide if it's needed.
+    # TODO: This seems unsually slow. Investigate more and decide
+    # if it's needed.
     unique_color_tensors: torch.Tensor = torch.unique(
         seg_mask_3d.reshape(-1, 3), dim=0)
     colors_used: list[Color] = unique_color_tensors.tolist()
@@ -50,9 +50,11 @@ def rgb_pixels_to_1d(
     reshaped_pixel_values: torch.Tensor
     match len(pixel_values.shape):
         case 3:
-            reshaped_pixel_values = pixel_values.permute(1, 2, 0).reshape(-1, 3)
+            reshaped_pixel_values = pixel_values.permute(
+                1, 2, 0).reshape(-1, 3)
         case 4:
-            reshaped_pixel_values = pixel_values.permute(0, 2, 3, 1).reshape(-1, 3)
+            reshaped_pixel_values = pixel_values.permute(
+                0, 2, 3, 1).reshape(-1, 3)
 
     for color_tensor in reshaped_pixel_values:
         color_list: list[int] = color_tensor.tolist()
