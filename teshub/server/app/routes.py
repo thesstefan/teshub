@@ -22,7 +22,7 @@ def predict() -> flask.Response:
     image = Image.open(io.BytesIO(image_bytes))
 
     seg_mask, labels, color_dict = (
-        weather_informer_predictor.predict_and_process(image)
+        next(weather_informer_predictor.predict_and_process([image]))
     )
 
     seg_bytes = io.BytesIO()
