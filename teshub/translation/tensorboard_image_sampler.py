@@ -13,6 +13,10 @@ class TensorboardImageSampler(pl.callbacks.Callback):
     visualize_dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]]
     use_att: bool
     use_seg: bool
+    device: torch.device = (
+        torch.device('cpu') if torch.cuda.is_available()
+        else torch.device('cuda')
+    )
 
     def _revert_normalization(self, img: torch.Tensor) -> torch.Tensor:
         reverted: torch.Tensor = normalize(
@@ -33,7 +37,7 @@ class TensorboardImageSampler(pl.callbacks.Callback):
             pl_module.eval()
             for batch in self.visualize_dataloader:
                 source_data, _ = batch
-                source_image_data = source_data[0]
+                source_image_data = source_data[0].to(self.device)
 
                 generated_image_batch: torch.Tensor
                 source_image_batch: torch.Tensor
