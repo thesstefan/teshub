@@ -59,6 +59,8 @@ class Weather2WeatherDataset(
             else:
                 self.frame_pairs.extend(frame_pairs)
 
+        random.shuffle(self.frame_pairs)
+
     def __len__(self) -> int:
         return len(self.frame_pairs)
 
