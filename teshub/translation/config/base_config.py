@@ -46,9 +46,12 @@ class BaseTranslationConfig(TranslationConfig, abc.ABC):
                 )),
         ])
 
-        att_transform = transforms.Lambda(
-            lambda seg: cls.attention_map(seg)
-        )
+        att_transform = transforms.Compose([
+            transforms.Lambda(
+                lambda seg: cls.attention_map(seg)
+            ),
+            transforms.GaussianBlur(kernel_size=101)
+        ])
 
         return img_transform, seg_transform, att_transform
 
