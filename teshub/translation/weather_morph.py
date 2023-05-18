@@ -110,7 +110,7 @@ class WeatherMorph(AttentionPix2Pix):
 
         return (
             discriminator_loss,
-            patch_gan_loss, weather_seg_loss, weather_seg_loss
+            patch_gan_loss, weather_seg_loss, weather_reg_loss
         )
 
     def training_step(
