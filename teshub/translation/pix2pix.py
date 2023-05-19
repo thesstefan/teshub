@@ -26,7 +26,7 @@ class Pix2Pix(pl.LightningModule):
     adversarial_criterion: nn.modules.loss._Loss = field(init=False)
     reconstruct_criterion: nn.modules.loss._Loss = field(init=False)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, save_hparams: bool = True) -> None:
         super().__init__()
         self.automatic_optimization = False
 
@@ -39,11 +39,10 @@ class Pix2Pix(pl.LightningModule):
         self.adversarial_criterion = nn.BCEWithLogitsLoss()
         self.reconstruct_criterion = nn.L1Loss()
 
-        """
-        self.save_hyperparameters(
-            "lr", "lambda_reconstruct"
-        )
-        """
+        if save_hparams:
+            self.save_hyperparameters(
+                "lr", "lambda_reconstruct"
+            )
 
     # TODO: Move this out of the class
     def _weights_init(self, module: nn.Module) -> None:
@@ -73,7 +72,7 @@ class Pix2Pix(pl.LightningModule):
         )
 
         reconstruct_loss: torch.Tensor = self.reconstruct_criterion(
-            fake_images, real_images)
+            fake_images, conditioned_images)
 
         return adversarial_loss + self.lambda_reconstruct * reconstruct_loss
 

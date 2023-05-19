@@ -16,10 +16,12 @@ from teshub.translation.att_pix2pix import AttentionPix2Pix
 @dataclass(eq=False, kw_only=True)
 class WeatherMorph(AttentionPix2Pix):
     weather_informer_ckpt_path: str
+    weather_informer_model: str
+
     weather_informer: nn.Module = field(init=False)
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
+    def __post_init__(self, save_hparams: bool = True) -> None:
+        super().__post_init__(save_hparams=False)
 
         self.weather_informer = WeatherInFormer.load_from_checkpoint(
             self.weather_informer_ckpt_path,
@@ -35,7 +37,13 @@ class WeatherMorph(AttentionPix2Pix):
         for param in self.weather_informer.parameters():
             param.requires_grad = False
 
+        if save_hparams:
+            self.save_hyperparameters(
+                "lr", "lambda_reconstruct", "weather_informer_model"
+            )
+
     # TODO: Move this in some utils package
+
     def _revert_normalization(self, img: torch.Tensor) -> torch.Tensor:
         reverted: torch.Tensor = normalize(
             img, (0.0, 0.0, 0.0), (2.0, 2.0, 2.0))

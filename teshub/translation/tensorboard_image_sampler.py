@@ -14,8 +14,8 @@ class TensorboardImageSampler(pl.callbacks.Callback):
     use_att: bool
     use_seg: bool
     device: torch.device = (
-        torch.device('cpu') if torch.cuda.is_available()
-        else torch.device('cuda')
+        torch.device('cuda') if torch.cuda.is_available()
+        else torch.device('cpu')
     )
 
     def _revert_normalization(self, img: torch.Tensor) -> torch.Tensor:
