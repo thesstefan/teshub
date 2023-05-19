@@ -9,16 +9,37 @@ from teshub.webcam.webcam_frame import WebcamFrame, WebcamFrameStatus
 
 
 @dataclass
-class Clear2SnowyConfig(BaseTranslationConfig):
+class AddSnowConfig(BaseTranslationConfig):
     @staticmethod
     def attention_map(seg: torch.Tensor) -> torch.Tensor:
-        attention = torch.full_like(seg, 0.075, dtype=torch.float32)
+        attention = torch.full_like(seg, 1.0, dtype=torch.float32)
 
         attention = torch.where(
             torch.logical_or(
                 seg == DEFAULT_SEG_LABEL2ID['snow'],
                 seg == DEFAULT_SEG_LABEL2ID['shadow_snow'],
-            ), 1.0, attention)
+            ), 0.8, attention)
+
+        attention = torch.where(
+            torch.logical_or(
+                seg == DEFAULT_SEG_LABEL2ID['blue_sky'],
+                seg == DEFAULT_SEG_LABEL2ID['fog']
+            ), 0.0, attention)
+
+        attention = torch.where(
+            torch.logical_or(
+                seg == DEFAULT_SEG_LABEL2ID['gray_sky'],
+                seg == DEFAULT_SEG_LABEL2ID['white_sky']
+            ), 0.0, attention)
+
+        attention = torch.where(
+            torch.logical_or(
+                seg == DEFAULT_SEG_LABEL2ID['white_clouds'],
+                seg == DEFAULT_SEG_LABEL2ID['black_clouds']
+            ), 0.0, attention)
+
+        attention = torch.where(
+            seg == DEFAULT_SEG_LABEL2ID['shadow'], 0.15, attention)
 
         return attention
 
@@ -51,4 +72,4 @@ class Clear2SnowyConfig(BaseTranslationConfig):
 
             return False
 
-        return is_snowy, is_not_snowy
+        return is_not_snowy, is_snowy
