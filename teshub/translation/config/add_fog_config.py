@@ -33,28 +33,28 @@ class AddFogConfig(BaseTranslationConfig):
         Callable[[WebcamFrame], bool],
         Callable[[WebcamFrame], bool]
     ]:
-        def is_snowy(frame: WebcamFrame) -> bool:
+        def is_not_foggy(frame: WebcamFrame) -> bool:
             assert frame.labels
 
             if frame.status not in [WebcamFrameStatus.MANUALLY_ANNOTATED,
                                     WebcamFrameStatus.AUTOMATICALLY_ANNOTATED]:
                 return False
 
-            if frame.labels['snowy'] > 0.8 and frame.labels['foggy'] < 0.1:
+            if frame.labels['foggy'] < 0.1:
                 return True
 
             return False
 
-        def is_not_snowy(frame: WebcamFrame) -> bool:
+        def is_foggy(frame: WebcamFrame) -> bool:
             assert frame.labels
 
             if frame.status not in [WebcamFrameStatus.MANUALLY_ANNOTATED,
                                     WebcamFrameStatus.AUTOMATICALLY_ANNOTATED]:
                 return False
 
-            if frame.labels['snowy'] < 0.1 and frame.labels['foggy'] < 0.1:
+            if frame.labels['foggy'] > 0.5:
                 return True
 
             return False
 
-        return is_not_snowy, is_snowy
+        return is_not_foggy, is_foggy
