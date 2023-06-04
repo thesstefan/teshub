@@ -15,6 +15,7 @@ from teshub.translation.att_pix2pix import AttentionPix2Pix
 from teshub.translation.config.clear2cloudy_config import Clear2CloudyConfig
 from teshub.translation.tensorboard_image_sampler import \
     TensorboardImageSampler
+from teshub.translation.vae import WeatherMorphVAE
 from teshub.translation.weather2weather import Weather2WeatherDataset
 from teshub.translation.weather_morph import WeatherMorph
 
@@ -92,7 +93,7 @@ def setup_trainer(
     callbacks: list[Callback] = [  # type: ignore[no-any-unimported]
         checkpoint_callback,
         TensorboardImageSampler(visualize_dataloader,
-                                use_att=True, use_seg=True)
+                                use_att=False, use_seg=False)
     ]
 
     return pl.Trainer(
@@ -113,17 +114,23 @@ def main() -> None:
     weather2weather = Weather2WeatherDataset.from_translation_config(
         webcam_dataset,
         translation_config=Clear2CloudyConfig,
-        max_pairs_per_webcam=2,
-        return_att=True,
-        return_seg=True,
-        return_labels=True,
+        max_pairs_per_webcam=10,
+        return_att=False,
+        return_seg=False,
+        return_labels=False,
     )
 
+    model = WeatherMorphVAE(
+        input_height=512
+    )
+
+    """
     model = WeatherMorph(
         weather_informer_ckpt_path="INFORMER.ckpt",
         lr=0.0002,
         lambda_reconstruct=200
     )
+    """
 
     visualize_count: int = 5
     dataset_indices = list(range(len(weather2weather)))
