@@ -2,6 +2,7 @@
 https://toughengineer.github.io/demo/slider-styler*/
 input[type=range].range-input {
   height: 2.2em;
+  background-color: #F4F3F2;
   appearance: none;
   -webkit-appearance: none;
 }
