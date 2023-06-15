@@ -67,7 +67,8 @@ def predict_translation(method: str) -> flask.Response:
     seg_file: FileStorage = request_files['seg']
 
     image_bytes: bytes = image_file.read()
-    image = Image.open(io.BytesIO(image_bytes)).resize(
+    orig_image = Image.open(io.BytesIO(image_bytes))
+    image = orig_image.resize(
         (512, 512), Image.Resampling.BILINEAR)
 
     seg_bytes: bytes = seg_file.read()
@@ -87,11 +88,10 @@ def predict_translation(method: str) -> flask.Response:
     source = normalize(source, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     gen = model(torch.unsqueeze(source, dim=0),
                 torch.unsqueeze(attention, dim=0))[0]
-    gen= normalize(gen, (0.0, 0.0, 0.0), (2, 2, 2))
-    gen= normalize(gen, (-0.5, -0.5, -0.5), (1, 1, 1))
+    gen = normalize(gen, (0.0, 0.0, 0.0), (2, 2, 2))
+    gen = normalize(gen, (-0.5, -0.5, -0.5), (1, 1, 1))
 
-
-    gen = to_pil_image(gen).convert('RGB')
+    gen = to_pil_image(gen).convert('RGB').resize(orig_image.size, Image.Resampling.BILINEAR)
     gen_bytes = io.BytesIO()
     gen.save(gen_bytes, 'png', quality=100)
     gen_bytes.seek(0)

@@ -15,3 +15,6 @@ class Config:
         os.path.join(basedir, 'app.db')
     )
     SEG_MODEL_CKPT: str | None = os.getenv('SEG_MODEL_CKPT')
+    MORPH_ADD_SNOW_CKPT: str | None = os.getenv('MORPH_ADD_SNOW_CKPT')
+    MORPH_ADD_CLOUDS_CKPT: str | None = os.getenv('MORPH_ADD_CLOUDS_CKPT')
+    MORPH_ADD_FOG_CKPT: str | None = os.getenv('MORPH_ADD_FOG_CKPT')
