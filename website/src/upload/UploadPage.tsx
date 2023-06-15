@@ -14,7 +14,7 @@ interface WeatherLabels {
 }
 
 interface Name2NameMapping {
-    [key: string] : string
+    [key: string]: string
 }
 
 interface ColorPallete {
@@ -38,12 +38,16 @@ const FORMATTED_WEATHER_CUES: Name2NameMapping = {
 
 function UploadPage() {
     const [loading, setLoading] = useState<boolean>(false)
+    const [translationLoading, setTranslationLoading] = useState<boolean>(false)
 
     const [colorMap, setColorPallete] = useState<ColorPallete | undefined>(undefined);
     const [labels, setLabels] = useState<WeatherLabels | undefined>(undefined);
     const [file, setFile] = useState<File | undefined>(undefined);
+    const [segmentation, setSegmentationFile] = useState<File | undefined>(undefined);
     const [inputImageUrl, setInputImageUrl] = useState<string | undefined>(undefined);
     const [segmentationMaskUrl, setSegmentationMaskUrl] = useState<string | undefined>(undefined);
+    const [translatedUrl, setTranslatedUrl] = useState<string | undefined>(undefined);
+    const [viewUrl, setViewUrl] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         if (labels) {
@@ -82,7 +86,7 @@ function UploadPage() {
         const formData = new FormData();
         formData.append('image', file);
 
-        fetch('/preprocess/predict', {
+        fetch('/predict/segmentation', {
             method: 'POST',
             body: formData,
         }).then(response => {
@@ -98,6 +102,10 @@ function UploadPage() {
         }).then((data) => {
             const segmentationMaskUrl = URL.createObjectURL(data);
             setSegmentationMaskUrl(segmentationMaskUrl);
+            setViewUrl(segmentationMaskUrl);
+
+            const file = new File([data], "segmentation.png", { type: 'image/png' });
+            setSegmentationFile(file);
         }).catch(
             error => console.error(error)
         ).finally(() => {
@@ -105,9 +113,54 @@ function UploadPage() {
         });
     }
 
+    const handleTranslationClick = (
+        type: string,
+        event: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        setTranslationLoading(true);
+
+        const formData = new FormData();
+        formData.append('image', file!);
+        formData.append('seg', segmentation!);
+
+        fetch(`/predict/translation/${type}`, {
+            method: 'POST',
+            body: formData,
+        }).then((response) => response.blob()
+        ).then((data) => {
+            const translatedUrl = URL.createObjectURL(data);
+            setTranslatedUrl(translatedUrl);
+
+            setViewUrl(translatedUrl);
+        }).catch(
+            error => console.error(error)
+        ).finally(() => {
+            setTranslationLoading(false);
+        });
+    }
+
+    const handleAddSnowClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        handleTranslationClick('add_snow', event);
+    }
+    const handleAddFogClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        handleTranslationClick('add_fog', event);
+    }
+    const handleAddCloudsClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        handleTranslationClick('add_clouds', event);
+    }
+    const handleShowSegmentationClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setViewUrl(segmentationMaskUrl)
+    }
+
     return (
         <>
             <div className="image-button-box">
+                {inputImageUrl && segmentationMaskUrl && translationLoading &&
+                    <div className="translation-loader-cont">
+                        <div className="translation-loader"></div>
+                    </div>
+
+                }
                 <label htmlFor="image-upload" className="image-upload">
                     Upload Image
                 </label>
@@ -122,85 +175,96 @@ function UploadPage() {
                 {loading && <div className="loader"></div>}
 
                 {!loading &&
-                    <div className="prediction-results">
-                        <div className="label-results">
-                            {labels &&
-                                <div className="weather-label-container animate pop">
-                                    <RangeInput
-                                        id="snowy-range"
-                                        color="white"
-                                        min={0} max={1}
-                                        step={0.25}
-                                        defaultValue={labels.snowy}
-                                    />
-                                    <RangeInput
-                                        id="cloudy-range"
-                                        color="gray"
-                                        min={0}
-                                        max={1}
-                                        step={0.25}
-                                        defaultValue={labels.cloudy}
-                                    />
-                                    <RangeInput
-                                        id="rainy-range"
-                                        color="lightblue"
-                                        min={0}
-                                        max={1}
-                                        step={0.5}
-                                        defaultValue={labels.rainy}
-                                    />
-                                    <RangeInput
-                                        id="foggy-range"
-                                        color="red"
-                                        min={0}
-                                        max={1}
-                                        step={0.5}
-                                        defaultValue={labels.foggy}
-                                    />
+                    <div className="show">
+                        <div className="prediction-results">
+                            <div className="label-results">
+                                {labels &&
+                                    <div className="weather-label-container animate pop">
+                                        <div className="weather-label">
+                                            <div className="weather-label-name">Cloudy</div>
+                                            <div className="weather-label-value">{labels!.cloudy.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                        <div className="weather-label">
+                                            <div className="weather-label-name">Rainy</div>
+                                            <div className="weather-label-value">{labels!.rainy.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                        <div className="weather-label">
+                                            <div className="weather-label-name">Foggy</div>
+                                            <div className="weather-label-value">{labels!.foggy.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                        <div className="weather-label">
+                                            <div className="weather-label-name">Snowy</div>
+                                            <div className="weather-label-value">{labels!.snowy.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div className="image-results">
+                                {inputImageUrl && viewUrl &&
+                                    <div className="image-slider-container animate pop">
+                                        <ReactCompareSlider
+                                            handle={
+                                                <ReactCompareSliderHandle
+                                                    buttonStyle={{
+                                                        border: 0,
+                                                        backdropFilter: 'none',
+                                                        WebkitBackdropFilter: 'none',
+                                                        boxShadow: 'none',
+                                                        color: 'black',
+                                                        height: 0,
+                                                        gap: 15,
+                                                    }}
+                                                    linesStyle={{ width: 8, color: 'black' }} />
+                                            }
 
-                                    <div className="weather-label">
-                                        <div className="weather-label-name">cloudy</div>
-                                        <div className="weather-label-value">{labels!.cloudy}</div>
+                                            itemOne={
+                                                <ReactCompareSliderImage src={inputImageUrl} />
+                                            }
+
+                                            itemTwo={
+                                                <ReactCompareSliderImage src={viewUrl} />
+                                            }
+                                        />
+                                    </div>
+                                }
+                            </div>
+                            {colorMap &&
+                                <div>
+                                    <div className="weather-cue-legend">
+                                        {Object.entries(colorMap).map(([name, color]) => {
+                                            return <LegendItem name={FORMATTED_WEATHER_CUES[name]} color={`rgb(${color.join(',')})`} />
+                                        })}
                                     </div>
                                 </div>
                             }
                         </div>
-                        <div className="image-results">
-                            {inputImageUrl && segmentationMaskUrl &&
-                                <div className="image-slider-container animate pop">
-                                    <ReactCompareSlider
-                                        handle={
-                                            <ReactCompareSliderHandle
-                                                buttonStyle={{
-                                                    border: 0,
-                                                    backdropFilter: 'none',
-                                                    WebkitBackdropFilter: 'none',
-                                                    boxShadow: 'none',
-                                                    color: 'black',
-                                                    height: 0,
-                                                    gap: 15,
-                                                }}
-                                                linesStyle={{ width: 8, color: 'black' }} />
-                                        }
-
-                                        itemOne={
-                                            <ReactCompareSliderImage src={inputImageUrl} />
-                                        }
-
-                                        itemTwo={
-                                            <ReactCompareSliderImage src={segmentationMaskUrl} />
-                                        }
-                                    />
-                                </div>
-                            }
-                        </div>
-                        {colorMap &&
-                            <div>
-                                <div className="weather-cue-legend">
-                                    {Object.entries(colorMap).map(([name, color]) => {
-                                        return <LegendItem name={FORMATTED_WEATHER_CUES[name]} color={`rgb(${color.join(',')})`} />
-                                    })}
-                                </div>
+                        {inputImageUrl && segmentationMaskUrl && colorMap &&
+                            <div className="translation-buttons">
+                                <button
+                                    className="button-50 translation-button"
+                                    id="add-snow-button"
+                                    onClick={handleAddSnowClick}
+                                >
+                                    Add Snow
+                                </button>
+                                <button
+                                    className="translation-button button-50"
+                                    onClick={handleAddCloudsClick}
+                                >
+                                    Add Clouds
+                                </button>
+                                <button
+                                    className="translation-button button-50"
+                                    onClick={handleAddFogClick}
+                                >
+                                    Add Fog
+                                </button>
+                                <button
+                                    className="translation-button button-50"
+                                    onClick={handleShowSegmentationClick}
+                                >
+                                    Show Segmentation
+                                </button>
                             </div>
                         }
                     </div>

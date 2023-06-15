@@ -163,14 +163,20 @@ input[type="file"] {
 .weather-label-container {
     display: flex;
     flex-direction: column;
+
+    box-shadow: #F4F3F2 4px 4px 0 0,#000 4px 4px 0 1px;
+    box-sizing: border-box;
 }
 
+.weather-label-name {
+    padding-right: 40px;
+}
 
 .weather-label {
     display: flex;
     justify-content: space-between;
 
-    border: 5px solid blue;
+    border: 5px solid black;
     background-color: #000;
     color: #F4F3F2;
 }
@@ -178,4 +184,25 @@ input[type="file"] {
 .weather-cue-legend {
     justify-content: center;
     flex-direction: column;
+}
+
+.translation-buttons {
+    display: flex;
+    padding-top: 30px;
+    justify-content: center;
+}
+
+.translation-loader {
+  width: 20px;
+  height: 20px;
+  background: #000;
+  animation: rotate 1s linear infinite;
+}
+
+.translation-loader-cont {
+    padding-right: 10px;
+}
+
+.translation-results {
+    transform: scale(0.6);
 }
