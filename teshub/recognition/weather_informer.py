@@ -96,6 +96,7 @@ class WeatherInFormer(pl.LightningModule):
                             task="multiclass",
                             num_classes=len(self.seg_label_names),
                             average="macro",
+                            top_k=1
                         ),
                     },
                     prefix=prefix
