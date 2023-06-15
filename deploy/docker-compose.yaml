@@ -1,0 +1,23 @@
+version: '3.1'
+services:
+    server:
+      build: 
+          dockerfile: server.Dockerfile
+      command: "flask run --no-debugger --host=0.0.0.0 --port=5000"
+      ports: 
+        - '5000:5000'
+
+    web:
+      build:
+        dockerfile: website.Dockerfile
+        args:
+          - BACKEND_SERVER=server
+      expose:
+        - 3000
+      ports: 
+        - '3000:3000'
+      stdin_open: true
+      links:
+        - server
+      depends_on:
+        - server
