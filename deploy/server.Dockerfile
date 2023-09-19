@@ -8,7 +8,7 @@ RUN pip install gdown
 RUN gdown 1vE11lduBxK6nKxZVwJmGLiE0kq6j2cyd 
 RUN gdown 1WAkKZH2VcBxKvSCEFHkI3buKEogGi3aL
 RUN gdown 1AUyrGocZqGhR6d-cQltmn4cdjgugEdSW
-RUN gdown 1bh74oduIKbT4G32SLJOtDgHXKn4JS71K
+RUN gdown 1HcWaihmp9zTevRHE6a_K5F3mp1bHLok1
 
 RUN pip install "../../.[server]"
 
